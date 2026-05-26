@@ -6,6 +6,8 @@
 <title>Colliers — Calendario de Marketing</title>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Open Sans',Verdana,sans-serif}
 :root{
@@ -134,12 +136,23 @@ const CANALES=['IG','Email MKT','LinkedIn','Facebook','X'];
 const CANAL_COLORS={'IG':'tag-ig','Email MKT':'tag-em','LinkedIn':'tag-li','Facebook':'tag-fb','X':'tag-x'};
 const CANAL_BG={'IG':'#1C54F4','Email MKT':'#2AB6A9','LinkedIn':'#25408F','Facebook':'#4D93FF','X':'#353E59'};
 
-const KEY='colliers_mkt_v3';
-function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return{}}}
-function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch{}}
+const firebaseConfig={
+  apiKey:"AIzaSyA2sTpsyFt4_SWhinvyGkNlTARw2zctMbw",
+  authDomain:"colliers-calendar.firebaseapp.com",
+  databaseURL:"https://colliers-calendar-default-rtdb.firebaseio.com",
+  projectId:"colliers-calendar",
+  storageBucket:"colliers-calendar.firebasestorage.app",
+  messagingSenderId:"15263024026",
+  appId:"1:15263024026:web:ee1ec4d19996bc68c0f023"
+};
+firebase.initializeApp(firebaseConfig);
+const firebaseDb=firebase.database();
+const calendarRef=firebaseDb.ref('calendar_data');
+
+function save(d){calendarRef.set(d||{})}
 
 const today=new Date();
-let S={view:'calendar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,data:load()};
+let S={view:'calendar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,data:{}};
 
 function dayKey(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 
@@ -499,7 +512,7 @@ function renderModal(){
   return overlay;
 }
 
-render();
+calendarRef.on('value',(snap)=>{S.data=snap.val()||{};render();});
 </script>
 </body>
 </html>
