@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colliers — Calendario de Marketing</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Open Sans',Verdana,sans-serif}
+:root{
+  --c-deep:#000759;--c-dark:#25408F;--c-medium:#1C54F4;--c-light:#4D93FF;--c-pale:#C3E6FF;
+  --c-dbg:#353E59;--c-dg:#56648F;--c-mg:#7B8BBD;--c-lg:#ACBBE8;--c-pbg:#DBE5FF;
+  --c-yellow:#FFD400;--c-red:#ED1B34;--c-teal:#2AB6A9;--c-white:#FFFFFF;--c-grey:#CCCDD5;
+  --c-bg:#F4F6FB;
+}
+body{background:var(--c-bg);min-height:100vh}
+.app{max-width:980px;margin:0 auto;background:var(--c-white);min-height:100vh;box-shadow:0 0 24px rgba(0,7,89,0.08)}
+.brand-header{background:var(--c-dark);padding:12px 20px;display:flex;align-items:center;gap:10px}
+.brand-accent{width:28px;height:3px;background:var(--c-yellow)}
+.brand-title{color:var(--c-white);font-size:15px;font-weight:700;letter-spacing:0.3px}
+.brand-sub{color:var(--c-lg);font-size:12px;font-weight:400;margin-left:auto}
+.main{padding:1.25rem 1.5rem}
+.tabs{display:flex;gap:0;margin-bottom:1.5rem;border-bottom:2px solid var(--c-pbg)}
+.tab{padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:none;color:var(--c-mg);border-bottom:3px solid transparent;margin-bottom:-2px;letter-spacing:0.5px;text-transform:uppercase}
+.tab.active{color:var(--c-dark);border-bottom:3px solid var(--c-medium)}
+.tab:hover{color:var(--c-dark)}
+.nav-row{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem}
+.nav-row h2{font-size:17px;font-weight:700;flex:1;text-align:center;color:var(--c-deep)}
+.nav-btn{background:none;border:1.5px solid var(--c-lg);border-radius:2px;padding:5px 14px;cursor:pointer;font-size:15px;color:var(--c-dark);font-weight:700}
+.nav-btn:hover{background:var(--c-pbg);border-color:var(--c-medium)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.stat-card{background:var(--c-pbg);border-left:3px solid var(--c-medium);border-radius:2px;padding:12px 14px}
+.stat-label{font-size:10px;font-weight:700;color:var(--c-dg);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px}
+.stat-val{font-size:24px;font-weight:700;color:var(--c-deep)}
+.stat-sub{font-size:11px;color:var(--c-mg);margin-top:2px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:1.5rem}
+.cal-header{text-align:center;font-size:10px;font-weight:700;color:var(--c-dark);padding:5px;text-transform:uppercase;letter-spacing:0.6px}
+.cal-day{border:1px solid var(--c-pbg);border-radius:2px;min-height:78px;padding:5px;cursor:pointer;background:var(--c-white);position:relative;transition:border-color 0.15s}
+.cal-day:hover{border-color:var(--c-medium);background:var(--c-pbg)}
+.cal-day.empty{background:none;border:none;cursor:default}
+.cal-day.weekend{background:#F8FAFF}
+.cal-day.today{border:2px solid var(--c-medium)}
+.cal-day.selected{border:2px solid var(--c-dark);background:var(--c-pbg)}
+.day-num{font-size:11px;font-weight:700;color:var(--c-dg);margin-bottom:3px}
+.day-tags{display:flex;flex-wrap:wrap;gap:2px}
+.tag{font-size:8px;padding:1px 5px;border-radius:1px;font-weight:700;letter-spacing:0.2px;white-space:nowrap}
+/* Canal colors */
+.tag-ig{background:#1C54F4;color:#fff}
+.tag-em{background:#2AB6A9;color:#fff}
+.tag-li{background:#25408F;color:#fff}
+.tag-fb{background:#4D93FF;color:#fff}
+.tag-x{background:#353E59;color:#fff}
+.tag-done{background:#ACBBE8;color:#000759;text-decoration:line-through}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,7,89,0.45);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal{background:var(--c-white);border-radius:2px;border-top:4px solid var(--c-medium);padding:1.5rem;width:360px;max-width:95vw}
+.modal-title{font-size:13px;font-weight:700;color:var(--c-deep);margin-bottom:1.25rem;text-transform:uppercase;letter-spacing:0.4px;display:flex;justify-content:space-between;align-items:center}
+.modal-date{font-size:12px;color:var(--c-mg);font-weight:400;text-transform:none;letter-spacing:0}
+.modal-close{background:none;border:none;cursor:pointer;font-size:18px;color:var(--c-mg);line-height:1}
+.modal-close:hover{color:var(--c-red)}
+.form-row{margin-bottom:12px}
+.form-row label{font-size:10px;font-weight:700;color:var(--c-dg);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px}
+.form-row select,.form-row textarea{width:100%;font-size:13px;border-radius:2px;border:1.5px solid var(--c-lg);padding:7px 9px;background:var(--c-white);color:var(--c-deep);font-family:'Open Sans',Verdana,sans-serif}
+.form-row select:focus,.form-row textarea:focus{outline:none;border-color:var(--c-medium)}
+.form-row textarea{resize:vertical;min-height:56px}
+.form-check{display:flex;align-items:center;gap:8px;margin-top:4px}
+.form-check input{width:16px;height:16px;cursor:pointer;accent-color:var(--c-teal)}
+.form-check label{font-size:13px;color:var(--c-deep);font-weight:400;text-transform:none;letter-spacing:0}
+.btn-row{display:flex;gap:8px;margin-top:16px}
+.btn-primary{background:var(--c-dark);color:var(--c-white);border:none;border-radius:2px;padding:9px 16px;font-size:12px;cursor:pointer;font-weight:700;flex:1;letter-spacing:0.3px;text-transform:uppercase;font-family:'Open Sans',Verdana,sans-serif}
+.btn-primary:hover{background:var(--c-deep)}
+.btn-secondary{background:none;border:1.5px solid var(--c-lg);border-radius:2px;padding:9px 14px;font-size:12px;cursor:pointer;color:var(--c-mg);font-family:'Open Sans',Verdana,sans-serif;font-weight:600}
+.btn-secondary:hover{background:#FDECEA;color:var(--c-red);border-color:var(--c-red)}
+.content-list{margin-top:4px}
+.content-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--c-pbg)}
+.content-item:last-child{border-bottom:none}
+.check-btn{width:20px;height:20px;min-width:20px;border-radius:1px;border:1.5px solid var(--c-lg);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:1px}
+.check-btn.done{background:var(--c-teal);border-color:var(--c-teal);color:white}
+.item-info{flex:1;min-width:0}
+.item-title{font-size:13px;font-weight:600;color:var(--c-deep)}
+.item-title.done{text-decoration:line-through;color:var(--c-mg)}
+.item-badges{display:flex;gap:4px;margin:3px 0}
+.badge{font-size:9px;padding:2px 6px;border-radius:1px;font-weight:700;letter-spacing:0.2px}
+.badge-area{background:var(--c-pbg);color:var(--c-dark)}
+.badge-canal{color:#fff}
+.item-meta{font-size:11px;color:var(--c-mg);margin-top:2px}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--c-grey);font-size:14px;padding:2px 4px;margin-top:1px}
+.del-btn:hover{color:var(--c-red)}
+.add-btn{position:absolute;bottom:3px;right:4px;background:none;border:none;color:var(--c-lg);cursor:pointer;font-size:15px;padding:1px;line-height:1}
+.add-btn:hover{color:var(--c-medium)}
+.section-title{font-size:12px;font-weight:700;color:var(--c-deep);margin-bottom:1rem;text-transform:uppercase;letter-spacing:0.5px;padding-bottom:6px;border-bottom:2px solid var(--c-pbg)}
+.divider{border:none;border-top:2px solid var(--c-pbg);margin:1.25rem 0}
+.detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.btn-add-detail{background:var(--c-dark);color:white;border:none;border-radius:2px;padding:7px 14px;font-size:11px;cursor:pointer;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;font-family:'Open Sans',Verdana,sans-serif}
+.btn-add-detail:hover{background:var(--c-deep)}
+.empty-msg{font-size:12px;color:var(--c-mg);text-align:center;padding:1.5rem 0;font-style:italic}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:1rem}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--c-dg)}
+.legend-dot{width:10px;height:10px;border-radius:1px}
+.area-section{margin-bottom:1.25rem}
+.area-title-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.area-name{font-weight:700;color:var(--c-deep);text-transform:uppercase;letter-spacing:0.3px;font-size:11px}
+.area-pct{color:var(--c-mg);font-weight:600;font-size:11px}
+.area-bar-bg{background:var(--c-pbg);height:6px;overflow:hidden;margin-bottom:3px}
+.area-bar{height:6px;transition:width 0.3s;background:var(--c-medium)}
+.area-nums{font-size:10px;color:var(--c-mg)}
+.annual-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px}
+.month-card{background:var(--c-white);border:1px solid var(--c-pbg);border-left:3px solid var(--c-light);border-radius:2px;padding:10px 12px;cursor:pointer;transition:all 0.15s}
+.month-card:hover{border-left-color:var(--c-medium);background:var(--c-pbg)}
+.month-name{font-size:12px;font-weight:700;color:var(--c-deep);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px}
+.month-mini-stat{display:flex;justify-content:space-between;font-size:11px;color:var(--c-dg);margin-bottom:2px;font-weight:600}
+.prog-bar{background:var(--c-pbg);height:4px;overflow:hidden;margin-top:6px}
+.prog-fill{height:4px;background:var(--c-medium);transition:width 0.3s}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand-header">
+    <div class="brand-accent"></div>
+    <span class="brand-title">Colliers — Calendario de Contenidos</span>
+    <span class="brand-sub">Marketing Team</span>
+  </div>
+  <div class="main">
+    <div id="root"></div>
+  </div>
+</div>
+
+<script>
+const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const TIPOS=['Post','Story','Reel/Video','Infografía','Newsletter','Artículo','Otro'];
+const AREAS=['Valuaciones','SPS','MKT','Research','Oficinas','Industrias','Retail','Informes de mercado','Consultorías'];
+const CANALES=['IG','Email MKT','LinkedIn','Facebook','X'];
+const CANAL_COLORS={'IG':'tag-ig','Email MKT':'tag-em','LinkedIn':'tag-li','Facebook':'tag-fb','X':'tag-x'};
+const CANAL_BG={'IG':'#1C54F4','Email MKT':'#2AB6A9','LinkedIn':'#25408F','Facebook':'#4D93FF','X':'#353E59'};
+
+const KEY='colliers_mkt_v3';
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return{}}}
+function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch{}}
+
+const today=new Date();
+let S={view:'calendar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,data:load()};
+
+function dayKey(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+
+function getMonthData(y,m){
+  const pre=`${y}-${String(m+1).padStart(2,'0')}-`;
+  let total=0,done=0,byArea={},byCanal={};
+  AREAS.forEach(a=>byArea[a]={total:0,done:0});
+  CANALES.forEach(c=>byCanal[c]={total:0,done:0});
+  Object.keys(S.data).filter(k=>k.startsWith(pre)).forEach(k=>{
+    (S.data[k]||[]).forEach(it=>{
+      total++;if(it.done)done++;
+      if(byArea[it.area]){byArea[it.area].total++;if(it.done)byArea[it.area].done++;}
+      if(byCanal[it.canal]){byCanal[it.canal].total++;if(it.done)byCanal[it.canal].done++;}
+    });
+  });
+  return{total,done,pending:total-done,byArea,byCanal};
+}
+
+function workdaysLeft(y,m){
+  const now=new Date(),last=new Date(y,m+1,0).getDate();
+  const start=(y===now.getFullYear()&&m===now.getMonth())?now.getDate():1;
+  let c=0;
+  for(let d=start;d<=last;d++){const wd=new Date(y,m,d).getDay();if(wd&&wd<6)c++;}
+  return c;
+}
+
+function el(tag,cls,html){
+  const e=document.createElement(tag);
+  if(cls)e.className=cls;
+  if(html!==undefined)e.innerHTML=html;
+  return e;
+}
+
+function render(){
+  const root=document.getElementById('root');
+  root.innerHTML='';
+  root.appendChild(renderTabs());
+  if(S.view==='calendar')root.appendChild(renderCalendar());
+  else if(S.view==='monthly')root.appendChild(renderMonthly());
+  else root.appendChild(renderAnnual());
+  if(S.showModal){
+    const mo=renderModal();
+    document.body.appendChild(mo);
+  }
+}
+
+function renderTabs(){
+  const d=el('div','tabs');
+  [['calendar','Calendario'],['monthly','Dashboard Mes'],['annual','Dashboard Anual']].forEach(([v,l])=>{
+    const b=el('button','tab'+(S.view===v?' active':''),l);
+    b.onclick=()=>{S.view=v;render()};
+    d.appendChild(b);
+  });
+  return d;
+}
+
+function navRow(title,onPrev,onNext){
+  const r=el('div','nav-row');
+  const pb=el('button','nav-btn','&#8249;');pb.onclick=onPrev;
+  const nb=el('button','nav-btn','&#8250;');nb.onclick=onNext;
+  const t=el('h2','',title);
+  r.appendChild(pb);r.appendChild(t);r.appendChild(nb);
+  return r;
+}
+
+function statsGrid(cards){
+  const g=el('div','stats-grid');
+  cards.forEach(({l,v,s})=>{
+    g.appendChild(el('div','stat-card',`<div class="stat-label">${l}</div><div class="stat-val">${v}</div><div class="stat-sub">${s}</div>`));
+  });
+  return g;
+}
+
+function renderCalendar(){
+  const wrap=el('div');
+  wrap.appendChild(navRow(MONTHS[S.month]+' '+S.year,
+    ()=>{S.month--;if(S.month<0){S.month=11;S.year--;}render()},
+    ()=>{S.month++;if(S.month>11){S.month=0;S.year++;}render()}));
+
+  const md=getMonthData(S.year,S.month);
+  const pct=md.total?Math.round(md.done/md.total*100):0;
+  wrap.appendChild(statsGrid([
+    {l:'Subidos',v:md.done,s:`${pct}% completado`},
+    {l:'Pendientes',v:md.pending,s:'por subir'},
+    {l:'Días hábiles',v:workdaysLeft(S.year,S.month),s:'restantes'},
+    {l:'Total planificado',v:md.total,s:'este mes'}
+  ]));
+
+  const leg=el('div','legend');
+  CANALES.forEach(c=>{
+    const li=el('div','legend-item',`<div class="legend-dot" style="background:${CANAL_BG[c]}"></div><span>${c}</span>`);
+    leg.appendChild(li);
+  });
+  wrap.appendChild(leg);
+
+  const grid=el('div','calendar-grid');
+  DAYS.forEach(d=>grid.appendChild(el('div','cal-header',d)));
+
+  const first=new Date(S.year,S.month,1).getDay();
+  const total=new Date(S.year,S.month+1,0).getDate();
+  for(let i=0;i<first;i++)grid.appendChild(el('div','cal-day empty'));
+
+  for(let d=1;d<=total;d++){
+    const wd=new Date(S.year,S.month,d).getDay();
+    let cls='cal-day';
+    if(!wd||wd===6)cls+=' weekend';
+    if(today.getFullYear()===S.year&&today.getMonth()===S.month&&today.getDate()===d)cls+=' today';
+    if(S.selectedDay===d)cls+=' selected';
+    const cell=el('div',cls);
+    cell.appendChild(el('div','day-num',d));
+    const k=dayKey(S.year,S.month,d);
+    const items=S.data[k]||[];
+    const tags=el('div','day-tags');
+    items.slice(0,3).forEach(it=>{
+      const cls2='tag '+(CANAL_COLORS[it.canal]||'tag-ig')+(it.done?' tag-done':'');
+      tags.appendChild(el('span',cls2,it.canal));
+    });
+    if(items.length>3){
+      const more=el('span','tag',`+${items.length-3}`);
+      more.style='background:#DBE5FF;color:#25408F';
+      tags.appendChild(more);
+    }
+    cell.appendChild(tags);
+    const ab=el('button','add-btn','+');
+    ab.title='Agregar contenido';
+    ab.onclick=(e)=>{e.stopPropagation();S.selectedDay=d;S.editIdx=null;S.showModal=true;render()};
+    cell.appendChild(ab);
+    cell.onclick=()=>{S.selectedDay=(S.selectedDay===d?null:d);render()};
+    grid.appendChild(cell);
+  }
+  wrap.appendChild(grid);
+
+  if(S.selectedDay){
+    wrap.appendChild(el('hr','divider'));
+    const k=dayKey(S.year,S.month,S.selectedDay);
+    const items=S.data[k]||[];
+    const dh=el('div','detail-header');
+    const dt=el('p','section-title',`${S.selectedDay} de ${MONTHS[S.month]}`);
+    dt.style='margin:0;border:none;padding:0';
+    const ab2=el('button','btn-add-detail','+ Agregar');
+    ab2.onclick=()=>{S.editIdx=null;S.showModal=true;render()};
+    dh.appendChild(dt);dh.appendChild(ab2);
+    wrap.appendChild(dh);
+    if(!items.length){
+      wrap.appendChild(el('p','empty-msg','Sin contenido planificado para este día'));
+    } else {
+      const cl=el('div','content-list');
+      items.forEach((item,idx)=>{
+        const row=el('div','content-item');
+        const cb=el('button','check-btn'+(item.done?' done':''),item.done?'✓':'');
+        cb.onclick=()=>{S.data[k][idx].done=!S.data[k][idx].done;save(S.data);render()};
+        const info=el('div','item-info');
+        const title=el('div','item-title'+(item.done?' done':''),`${item.tipo}`);
+        const badges=el('div','item-badges');
+        badges.appendChild(el('span','badge badge-area',item.area));
+        const cb2=el('span','badge badge-canal',item.canal);
+        cb2.style=`background:${CANAL_BG[item.canal]||'#1C54F4'}`;
+        badges.appendChild(cb2);
+        const desc=el('div','item-meta',item.desc||'Sin descripción');
+        info.appendChild(title);info.appendChild(badges);info.appendChild(desc);
+        const db=el('button','del-btn','🗑');
+        db.onclick=()=>{S.data[k].splice(idx,1);if(!S.data[k].length)delete S.data[k];save(S.data);render()};
+        row.appendChild(cb);row.appendChild(info);row.appendChild(db);
+        cl.appendChild(row);
+      });
+      wrap.appendChild(cl);
+    }
+  }
+  return wrap;
+}
+
+function renderMonthly(){
+  const wrap=el('div');
+  wrap.appendChild(navRow('Dashboard — '+MONTHS[S.month]+' '+S.year,
+    ()=>{S.month--;if(S.month<0){S.month=11;S.year--;}render()},
+    ()=>{S.month++;if(S.month>11){S.month=0;S.year++;}render()}));
+
+  const md=getMonthData(S.year,S.month);
+  const pct=md.total?Math.round(md.done/md.total*100):0;
+  wrap.appendChild(statsGrid([
+    {l:'Subidos',v:md.done,s:`${pct}% completado`},
+    {l:'Pendientes',v:md.pending,s:'por subir'},
+    {l:'Días hábiles',v:workdaysLeft(S.year,S.month),s:'restantes en el mes'},
+    {l:'Total planificado',v:md.total,s:'contenidos'}
+  ]));
+
+  wrap.appendChild(el('p','section-title','Avance por área'));
+  AREAS.forEach(area=>{
+    const ad=md.byArea[area]||{total:0,done:0};
+    const ap=ad.total?Math.round(ad.done/ad.total*100):0;
+    const sec=el('div','area-section');
+    sec.innerHTML=`
+      <div class="area-title-row">
+        <span class="area-name">${area}</span>
+        <span class="area-pct">${ap}%</span>
+      </div>
+      <div class="area-bar-bg"><div class="area-bar" style="width:${ap}%"></div></div>
+      <div class="area-nums">${ad.done} subidos de ${ad.total}</div>`;
+    wrap.appendChild(sec);
+  });
+
+  wrap.appendChild(el('p','section-title','Avance por canal'));
+  const cgrid=el('div','stats-grid');
+  CANALES.forEach(canal=>{
+    const cd=md.byCanal[canal]||{total:0,done:0};
+    const c=el('div','stat-card');
+    c.style='border-left-color:'+CANAL_BG[canal];
+    c.innerHTML=`<div class="stat-label">${canal}</div><div class="stat-val">${cd.total}</div><div class="stat-sub">${cd.done} subidos</div>`;
+    cgrid.appendChild(c);
+  });
+  wrap.appendChild(cgrid);
+
+  wrap.appendChild(el('p','section-title','Contenidos por tipo'));
+  const byTipo={};
+  const pre=`${S.year}-${String(S.month+1).padStart(2,'0')}-`;
+  Object.keys(S.data).filter(k=>k.startsWith(pre)).forEach(k=>{
+    (S.data[k]||[]).forEach(it=>{
+      byTipo[it.tipo]=byTipo[it.tipo]||{total:0,done:0};
+      byTipo[it.tipo].total++;if(it.done)byTipo[it.tipo].done++;
+    });
+  });
+  const tgrid=el('div','stats-grid');
+  TIPOS.forEach(t=>{
+    const td=byTipo[t]||{total:0,done:0};
+    tgrid.appendChild(el('div','stat-card',`<div class="stat-label">${t}</div><div class="stat-val">${td.total}</div><div class="stat-sub">${td.done} subidos</div>`));
+  });
+  wrap.appendChild(tgrid);
+  return wrap;
+}
+
+function renderAnnual(){
+  const wrap=el('div');
+  wrap.appendChild(navRow('Resumen Anual '+S.year,
+    ()=>{S.year--;render()},
+    ()=>{S.year++;render()}));
+
+  let yt=0,yd=0;
+  const byA={};AREAS.forEach(a=>byA[a]={total:0,done:0});
+  const byC={};CANALES.forEach(c=>byC[c]={total:0,done:0});
+  for(let m=0;m<12;m++){
+    const md=getMonthData(S.year,m);yt+=md.total;yd+=md.done;
+    AREAS.forEach(a=>{byA[a].total+=md.byArea[a]?.total||0;byA[a].done+=md.byArea[a]?.done||0});
+    CANALES.forEach(c=>{byC[c].total+=md.byCanal[c]?.total||0;byC[c].done+=md.byCanal[c]?.done||0});
+  }
+  const yp=yt?Math.round(yd/yt*100):0;
+  wrap.appendChild(statsGrid([
+    {l:'Total subidos',v:yd,s:`${yp}% completado`},
+    {l:'Total planificado',v:yt,s:'en el año'},
+    {l:'Pendientes',v:yt-yd,s:'por subir'}
+  ]));
+
+  wrap.appendChild(el('p','section-title','Por área — año completo'));
+  AREAS.forEach(area=>{
+    const ad=byA[area];
+    const ap=ad.total?Math.round(ad.done/ad.total*100):0;
+    const sec=el('div','area-section');
+    sec.innerHTML=`
+      <div class="area-title-row">
+        <span class="area-name">${area}</span>
+        <span class="area-pct">${ap}% — ${ad.done}/${ad.total}</span>
+      </div>
+      <div class="area-bar-bg"><div class="area-bar" style="width:${ap}%"></div></div>`;
+    wrap.appendChild(sec);
+  });
+
+  wrap.appendChild(el('p','section-title','Por canal — año completo'));
+  const cg=el('div','stats-grid');
+  CANALES.forEach(canal=>{
+    const cd=byC[canal];
+    const c=el('div','stat-card');
+    c.style='border-left-color:'+CANAL_BG[canal];
+    c.innerHTML=`<div class="stat-label">${canal}</div><div class="stat-val">${cd.total}</div><div class="stat-sub">${cd.done} subidos</div>`;
+    cg.appendChild(c);
+  });
+  wrap.appendChild(cg);
+
+  wrap.appendChild(el('p','section-title','Mes a mes'));
+  const mg=el('div','annual-grid');
+  for(let m=0;m<12;m++){
+    const md=getMonthData(S.year,m);
+    const pct=md.total?Math.round(md.done/md.total*100):0;
+    const mc=el('div','month-card');
+    mc.innerHTML=`
+      <div class="month-name">${MONTHS[m]}</div>
+      <div class="month-mini-stat"><span>Subidos</span><span>${md.done}/${md.total}</span></div>
+      <div class="month-mini-stat"><span>Pendientes</span><span>${md.pending}</span></div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>`;
+    mc.onclick=()=>{S.month=m;S.view='monthly';render()};
+    mg.appendChild(mc);
+  }
+  wrap.appendChild(mg);
+  return wrap;
+}
+
+function renderModal(){
+  const k=dayKey(S.year,S.month,S.selectedDay);
+  const isEdit=S.editIdx!==null;
+  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tipo:TIPOS[0],area:AREAS[0],canal:CANALES[0],desc:'',done:false};
+  const overlay=el('div','modal-overlay');
+  const m=el('div','modal');
+  m.innerHTML=`
+    <div class="modal-title">
+      <span>${isEdit?'Editar':'Agregar'} contenido</span>
+      <button class="modal-close" id="mc">✕</button>
+    </div>
+    <div class="modal-date">${S.selectedDay} de ${MONTHS[S.month]} ${S.year}</div>
+    <br>
+    <div class="form-row">
+      <label>Tipo de contenido</label>
+      <select id="fi-tipo">${TIPOS.map(t=>`<option${t===item.tipo?' selected':''}>${t}</option>`).join('')}</select>
+    </div>
+    <div class="form-row">
+      <label>Área de la empresa</label>
+      <select id="fi-area">${AREAS.map(a=>`<option${a===item.area?' selected':''}>${a}</option>`).join('')}</select>
+    </div>
+    <div class="form-row">
+      <label>Canal / Sitio</label>
+      <select id="fi-canal">${CANALES.map(c=>`<option${c===item.canal?' selected':''}>${c}</option>`).join('')}</select>
+    </div>
+    <div class="form-row">
+      <label>Descripción</label>
+      <textarea id="fi-desc" placeholder="Ej: Post sobre lanzamiento en Oficinas...">${item.desc||''}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-check">
+        <input type="checkbox" id="fi-done"${item.done?' checked':''}>
+        <label for="fi-done">Marcar como subido</label>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" id="fi-save">${isEdit?'Guardar cambios':'Agregar'}</button>
+      ${isEdit?'<button class="btn-secondary" id="fi-del">Eliminar</button>':''}
+    </div>`;
+  overlay.appendChild(m);
+
+  setTimeout(()=>{
+    document.getElementById('mc').onclick=()=>{S.showModal=false;overlay.remove();render()};
+    document.getElementById('fi-save').onclick=()=>{
+      const tipo=document.getElementById('fi-tipo').value;
+      const area=document.getElementById('fi-area').value;
+      const canal=document.getElementById('fi-canal').value;
+      const desc=document.getElementById('fi-desc').value;
+      const done=document.getElementById('fi-done').checked;
+      if(!S.data[k])S.data[k]=[];
+      if(isEdit)S.data[k][S.editIdx]={tipo,area,canal,desc,done};
+      else S.data[k].push({tipo,area,canal,desc,done});
+      save(S.data);S.showModal=false;overlay.remove();render();
+    };
+    const fd=document.getElementById('fi-del');
+    if(fd)fd.onclick=()=>{
+      S.data[k].splice(S.editIdx,1);
+      if(!S.data[k].length)delete S.data[k];
+      save(S.data);S.showModal=false;overlay.remove();S.editIdx=null;render();
+    };
+    overlay.onclick=(e)=>{if(e.target===overlay){S.showModal=false;overlay.remove();render()}};
+  },30);
+  return overlay;
+}
+
+render();
+</script>
+</body>
+</html>
