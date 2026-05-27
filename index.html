@@ -152,14 +152,82 @@ body{background:var(--c-bg);min-height:100vh}
 .month-card2-pct{font-size:11px;font-weight:700;color:var(--c-medium);margin-top:4px}
 .month-prog{background:var(--c-pbg);height:4px;border-radius:2px;margin-top:8px;overflow:hidden}
 .month-prog-fill{height:4px;border-radius:2px;background:linear-gradient(90deg,#25408F,#1C54F4)}
+
+/* ── TRANSICIONES GLOBALES ── */
+body,body *{transition:background-color 0.3s,color 0.3s,border-color 0.3s,box-shadow 0.3s}
+/* Excluir transiciones que no deben animarse */
+.area-bar-fill,.resp-mini-fill,.tipo-card-fill,.month-prog-fill,.prog-fill{transition:width 0.4s ease!important}
+
+/* ── TOGGLE BUTTON ── */
+.theme-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);color:white;border-radius:20px;padding:4px 12px;cursor:pointer;font-size:15px;margin-left:auto;line-height:1.5;letter-spacing:0}
+.theme-btn:hover{background:rgba(255,255,255,0.24)}
+
+/* ── MODO NOCHE ── */
+body.dark{background:#0d1117;--c-deep:#e6edf3;--c-pbg:#30363d;--c-dg:#8b949e;--c-mg:#8b949e;--c-lg:#30363d;--c-bg:#0d1117;--c-grey:#30363d;--c-dbg:#8b949e}
+body.dark .app{background:#0d1117;box-shadow:none}
+body.dark .brand-header{background:#161b22;border-bottom:1px solid #30363d}
+body.dark .main{background:#0d1117}
+body.dark .tabs{border-bottom-color:#30363d}
+body.dark .tab{color:#8b949e}
+body.dark .tab.active{color:#e6edf3}
+body.dark .tab:hover{color:#e6edf3}
+body.dark .nav-row h2{color:#e6edf3}
+body.dark .nav-btn{border-color:#30363d;color:#e6edf3}
+body.dark .nav-btn:hover{background:#161b22;border-color:#8b949e}
+body.dark .stat-card{background:rgba(255,255,255,0.04);border-left-color:var(--c-medium)}
+body.dark .cal-day{background:#1c2128;border-color:#30363d}
+body.dark .cal-day:hover{background:#161b22;border-color:var(--c-medium)}
+body.dark .cal-day.empty{background:transparent;border-color:transparent}
+body.dark .cal-day.weekend{background:#161b22}
+body.dark .cal-day.today{border-color:var(--c-medium)}
+body.dark .cal-day.selected{background:#161b22;border-color:#58a6ff}
+body.dark .day-num{color:#8b949e}
+body.dark .section-title{color:#e6edf3;border-bottom-color:#30363d}
+body.dark .divider{border-top-color:#30363d}
+body.dark .content-item{border-bottom-color:#30363d}
+body.dark .check-btn{border-color:#30363d}
+body.dark .item-title{color:#e6edf3}
+body.dark .badge-area{background:#30363d;color:#e6edf3}
+body.dark .badge-resp{background:#30363d;color:#e6edf3;border-color:#30363d}
+body.dark .modal-overlay{background:rgba(0,0,0,0.7)}
+body.dark .modal{background:#161b22}
+body.dark .modal-title{color:#e6edf3}
+body.dark .form-row label{color:#8b949e}
+body.dark .form-row select,body.dark .form-row textarea{background:#0d1117;color:#e6edf3;border-color:#30363d}
+body.dark .form-row select:focus,body.dark .form-row textarea:focus{border-color:var(--c-medium)}
+body.dark .form-check label{color:#e6edf3}
+body.dark .btn-secondary{border-color:#30363d;color:#8b949e}
+body.dark .btn-secondary:hover{background:rgba(237,27,52,0.1);color:var(--c-red);border-color:var(--c-red)}
+body.dark .detail-header .btn-add-detail{background:#25408F}
+body.dark .empty-msg{color:#8b949e}
+body.dark .legend-item{color:#8b949e}
+body.dark .dash-hero-pill{background:rgba(255,255,255,0.12)}
+body.dark .dash-s-title{border-bottom-color:#30363d;color:#8b949e}
+body.dark .area-bar-track{background:#30363d}
+body.dark .resp-card{background:#1c2128;border-color:#30363d}
+body.dark .resp-name{color:#e6edf3}
+body.dark .resp-mini-track{background:#30363d}
+body.dark .canal-chip{opacity:0.92}
+body.dark .tipo-card{background:#1c2128;border-color:#30363d}
+body.dark .tipo-card-name{color:#8b949e}
+body.dark .tipo-card-count{color:#e6edf3}
+body.dark .tipo-card-bar{background:#30363d}
+body.dark .month-card2{background:#1c2128;border-color:#30363d}
+body.dark .month-card2:hover{box-shadow:0 4px 16px rgba(0,0,0,0.4)}
+body.dark .month-card2-name{color:#e6edf3}
+body.dark .month-card2-big{color:#e6edf3}
+body.dark .month-prog{background:#30363d}
+body.dark .area-bar-name{color:#e6edf3}
+body.dark .area-bar-nums{color:#8b949e}
 </style>
 </head>
 <body>
+<script>if(localStorage.getItem('colliers_theme')==='dark')document.body.classList.add('dark');</script>
 <div class="app">
   <div class="brand-header">
     <div class="brand-accent"></div>
     <span class="brand-title">Colliers — Calendario de Contenidos</span>
-    <span class="brand-sub">Marketing Team</span>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Cambiar modo día/noche">🌙</button>
   </div>
   <div class="main">
     <div id="root"></div>
@@ -672,6 +740,18 @@ function renderModal(){
 }
 
 calendarRef.on('value',(snap)=>{S.data=snap.val()||{};render();});
+
+// ── TEMA ──
+function toggleTheme(){
+  const isDark=document.body.classList.toggle('dark');
+  localStorage.setItem('colliers_theme',isDark?'dark':'light');
+  document.getElementById('theme-btn').textContent=isDark?'☀️':'🌙';
+}
+// Sincronizar ícono con tema guardado al cargar
+(function(){
+  if(document.body.classList.contains('dark'))
+    document.getElementById('theme-btn').textContent='☀️';
+})();
 </script>
 </body>
 </html>
