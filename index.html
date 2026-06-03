@@ -103,6 +103,11 @@ body{background:var(--c-bg);min-height:100vh}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--c-dg)}
 .legend-dot{width:10px;height:10px;border-radius:1px}
 
+/* ── TOGGLE CHIPS ── */
+.toggle-chips{display:flex;flex-wrap:wrap;gap:6px;padding:3px 0}
+.toggle-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--c-lg);background:none;color:var(--c-dg);font-family:'Open Sans',Verdana,sans-serif;letter-spacing:0.2px}
+.toggle-chip:hover{border-color:var(--c-mg)}
+
 /* ── MODERN DASHBOARD ── */
 .dash-hero{background:linear-gradient(135deg,#25408F 0%,#1C54F4 100%);border-radius:10px;padding:20px 24px;display:flex;align-items:center;gap:20px;margin-bottom:22px;box-shadow:0 4px 20px rgba(37,64,143,0.25)}
 .dash-hero-ring{flex-shrink:0}
@@ -220,6 +225,8 @@ body.dark .month-card2-big{color:#e6edf3}
 body.dark .month-prog{background:#30363d}
 body.dark .area-bar-name{color:#e6edf3}
 body.dark .area-bar-nums{color:#8b949e}
+body.dark .toggle-chip{border-color:#30363d;color:#8b949e}
+body.dark .toggle-chip:hover{border-color:#8b949e}
 </style>
 </head>
 <body>
@@ -245,6 +252,9 @@ const CANAL_COLORS={'IG':'tag-ig','Email MKT':'tag-em','LinkedIn':'tag-li','Face
 const CANAL_BG={'IG':'#1C54F4','Email MKT':'#2AB6A9','LinkedIn':'#25408F','Facebook':'#4D93FF','X':'#353E59','YouTube':'#FF0000'};
 const RESPONSABLES=['Azaretto M.','Mendoza J.','Morua C.','Latorre I.'];
 const RESP_COLORS=['#25408F','#1C54F4','#2AB6A9','#353E59'];
+
+function getCanales(it){return Array.isArray(it.canales)?it.canales:(it.canal?[it.canal]:[]);}
+function getResps(it){return Array.isArray(it.resps)?it.resps:(it.resp?[it.resp]:[]);}
 
 const firebaseConfig={
   apiKey:"AIzaSyA2sTpsyFt4_SWhinvyGkNlTARw2zctMbw",
@@ -277,8 +287,8 @@ function getMonthData(y,m){
       total++;
       if(it.done)done++;
       if(byArea[it.area]){byArea[it.area].total++;if(it.done)byArea[it.area].done++;}
-      if(byCanal[it.canal]){byCanal[it.canal].total++;if(it.done)byCanal[it.canal].done++;}
-      if(it.resp&&byResp[it.resp]){byResp[it.resp].total++;if(it.done)byResp[it.resp].done++;}
+      getCanales(it).forEach(c=>{if(byCanal[c]){byCanal[c].total++;if(it.done)byCanal[c].done++;}});
+      getResps(it).forEach(r=>{if(byResp[r]){byResp[r].total++;if(it.done)byResp[r].done++;}});
     });
   });
   return{total,done,pending:total-done,byArea,byCanal,byResp};
@@ -390,7 +400,8 @@ function renderCalendar(){
     const items=S.data[k]||[];
     const tags=el('div','day-tags');
     items.slice(0,3).forEach(it=>{
-      tags.appendChild(el('span','tag '+(CANAL_COLORS[it.canal]||'tag-ig')+(it.done?' tag-done':''),it.canal));
+      const fc=getCanales(it)[0]||'';
+      tags.appendChild(el('span','tag '+(CANAL_COLORS[fc]||'tag-ig')+(it.done?' tag-done':''),fc));
     });
     if(items.length>3){
       const more=el('span','tag',`+${items.length-3}`);
@@ -430,10 +441,8 @@ function renderCalendar(){
         const title=el('div','item-title'+(item.done?' done':''),item.tipo);
         const badges=el('div','item-badges');
         badges.appendChild(el('span','badge badge-area',item.area));
-        const cb2=el('span','badge badge-canal',item.canal);
-        cb2.style=`background:${CANAL_BG[item.canal]||'#1C54F4'}`;
-        badges.appendChild(cb2);
-        if(item.resp)badges.appendChild(el('span','badge badge-resp',item.resp));
+        getCanales(item).forEach(c=>{const b=el('span','badge badge-canal',c);b.style=`background:${CANAL_BG[c]||'#1C54F4'}`;badges.appendChild(b);});
+        getResps(item).forEach(r=>badges.appendChild(el('span','badge badge-resp',r)));
         const desc=el('div','item-meta',item.desc||'Sin descripción');
         info.appendChild(title);info.appendChild(badges);info.appendChild(desc);
         const eb=el('button','edit-btn','<i class="ti ti-pencil"></i>');
@@ -672,10 +681,20 @@ function renderAnnual(){
 }
 
 /* ── MODAL ── */
+function chipRow(items,selected,colors){
+  return items.map((item,i)=>{
+    const on=selected.includes(item);
+    const bg=colors?colors[i]:null;
+    return `<button type="button" class="toggle-chip${on?' active':''}" data-val="${item}" data-bg="${bg||''}"${on&&bg?` style="background:${bg};border-color:${bg};color:white"`:''}>${item}</button>`;
+  }).join('');
+}
+
 function renderModal(){
   const k=dayKey(S.year,S.month,S.selectedDay);
   const isEdit=S.editIdx!==null;
-  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tipo:TIPOS[0],area:AREAS[0],resp:RESPONSABLES[0],canal:CANALES[0],desc:'',done:false};
+  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tipo:TIPOS[0],area:AREAS[0],resps:[],canales:[],desc:'',done:false};
+  const selCanales=getCanales(item);
+  const selResps=getResps(item);
   const overlay=el('div','modal-overlay');
   const m=el('div','modal');
   m.innerHTML=`
@@ -694,11 +713,11 @@ function renderModal(){
     </div>
     <div class="form-row">
       <label>Responsable</label>
-      <select id="fi-resp">${RESPONSABLES.map(r=>`<option${r===item.resp?' selected':''}>${r}</option>`).join('')}</select>
+      <div class="toggle-chips" id="fi-resps">${chipRow(RESPONSABLES,selResps,RESP_COLORS)}</div>
     </div>
     <div class="form-row">
       <label>Canal / Sitio</label>
-      <select id="fi-canal">${CANALES.map(c=>`<option${c===item.canal?' selected':''}>${c}</option>`).join('')}</select>
+      <div class="toggle-chips" id="fi-canales">${chipRow(CANALES,selCanales,Object.values(CANAL_BG))}</div>
     </div>
     <div class="form-row">
       <label>Descripción</label>
@@ -716,17 +735,29 @@ function renderModal(){
     </div>`;
   overlay.appendChild(m);
   setTimeout(()=>{
+    m.querySelectorAll('.toggle-chip').forEach(chip=>{
+      chip.addEventListener('click',()=>{
+        chip.classList.toggle('active');
+        if(chip.classList.contains('active')&&chip.dataset.bg){
+          chip.style.background=chip.dataset.bg;
+          chip.style.borderColor=chip.dataset.bg;
+          chip.style.color='white';
+        } else {
+          chip.style.cssText='';
+        }
+      });
+    });
     document.getElementById('mc').onclick=()=>{S.showModal=false;overlay.remove();render()};
     document.getElementById('fi-save').onclick=()=>{
       const tipo=document.getElementById('fi-tipo').value;
       const area=document.getElementById('fi-area').value;
-      const resp=document.getElementById('fi-resp').value;
-      const canal=document.getElementById('fi-canal').value;
+      const resps=[...m.querySelectorAll('#fi-resps .toggle-chip.active')].map(c=>c.dataset.val);
+      const canales=[...m.querySelectorAll('#fi-canales .toggle-chip.active')].map(c=>c.dataset.val);
       const desc=document.getElementById('fi-desc').value;
       const done=document.getElementById('fi-done').checked;
       if(!S.data[k])S.data[k]=[];
-      if(isEdit)S.data[k][S.editIdx]={tipo,area,resp,canal,desc,done};
-      else S.data[k].push({tipo,area,resp,canal,desc,done});
+      if(isEdit)S.data[k][S.editIdx]={tipo,area,resps,canales,desc,done};
+      else S.data[k].push({tipo,area,resps,canales,desc,done});
       save(S.data);S.showModal=false;overlay.remove();render();
     };
     const fd=document.getElementById('fi-del');
