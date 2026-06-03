@@ -51,8 +51,19 @@ body{background:var(--c-bg);min-height:100vh}
 .tag-em{background:#2AB6A9;color:#fff}
 .tag-li{background:#25408F;color:#fff}
 .tag-fb{background:#4D93FF;color:#fff}
-.tag-x{background:#353E59;color:#fff}
-.tag-yt{background:#FF0000;color:#fff}
+.tag-event{background:#FFD400;color:#000759}
+.btn-add-event{background:var(--c-yellow);color:var(--c-deep);border:none;border-radius:2px;padding:7px 14px;font-size:11px;cursor:pointer;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;font-family:'Open Sans',Verdana,sans-serif}
+.btn-add-event:hover{background:#e5bc00}
+.event-card{background:rgba(255,212,0,0.10);border:1px solid rgba(255,212,0,0.35);border-left:3px solid #FFD400;border-radius:4px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px}
+.event-card-title{font-size:13px;font-weight:700;color:var(--c-deep)}
+.event-card-title.done{text-decoration:line-through;color:var(--c-mg)}
+.form-row input[type=text]{width:100%;font-size:13px;border-radius:2px;border:1.5px solid var(--c-lg);padding:7px 9px;background:var(--c-white);color:var(--c-deep);font-family:'Open Sans',Verdana,sans-serif}
+.form-row input[type=text]:focus{outline:none;border-color:var(--c-medium)}
+body.dark .event-card{background:rgba(255,212,0,0.06);border-color:rgba(255,212,0,0.2);border-left-color:#FFD400}
+body.dark .event-card-title{color:#e6edf3}
+body.dark .form-row input[type=text]{background:#0d1117;color:#e6edf3;border-color:#30363d}
+body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
+
 .tag-done{background:#ACBBE8;color:#000759;text-decoration:line-through}
 .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,7,89,0.45);display:flex;align-items:center;justify-content:center;z-index:200}
 .modal{background:var(--c-white);border-radius:4px;border-top:4px solid var(--c-medium);padding:1.5rem;width:380px;max-width:95vw;max-height:90vh;overflow-y:auto}
@@ -272,7 +283,7 @@ const calendarRef=firebaseDb.ref('calendar_data');
 function save(d){calendarRef.set(d||{})}
 
 const today=new Date();
-let S={view:'calendar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,data:{}};
+let S={view:'calendar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,eventMode:false,data:{}};
 
 function dayKey(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 
@@ -400,8 +411,12 @@ function renderCalendar(){
     const items=S.data[k]||[];
     const tags=el('div','day-tags');
     items.slice(0,3).forEach(it=>{
-      const fc=getCanales(it)[0]||'';
-      tags.appendChild(el('span','tag '+(CANAL_COLORS[fc]||'tag-ig')+(it.done?' tag-done':''),fc));
+      if(it.isEvent){
+        tags.appendChild(el('span','tag tag-event'+(it.done?' tag-done':''),'📅 '+(it.nombre||'Evento')));
+      } else {
+        const fc=getCanales(it)[0]||'';
+        tags.appendChild(el('span','tag '+(CANAL_COLORS[fc]||'tag-ig')+(it.done?' tag-done':''),fc));
+      }
     });
     if(items.length>3){
       const more=el('span','tag',`+${items.length-3}`);
@@ -425,33 +440,54 @@ function renderCalendar(){
     const dh=el('div','detail-header');
     const dt=el('p','section-title',`${S.selectedDay} de ${MONTHS[S.month]}`);
     dt.style='margin:0;border:none;padding:0';
-    const ab2=el('button','btn-add-detail','+ Agregar');
-    ab2.onclick=()=>{S.editIdx=null;S.showModal=true;render()};
-    dh.appendChild(dt);dh.appendChild(ab2);
+    const btnGrp=el('div','');btnGrp.style='display:flex;gap:6px';
+    const ab2=el('button','btn-add-detail','+ Contenido');
+    ab2.onclick=()=>{S.editIdx=null;S.eventMode=false;S.showModal=true;render()};
+    const ab3=el('button','btn-add-event','+ Evento');
+    ab3.onclick=()=>{S.editIdx=null;S.eventMode=true;S.showModal=true;render()};
+    btnGrp.appendChild(ab2);btnGrp.appendChild(ab3);
+    dh.appendChild(dt);dh.appendChild(btnGrp);
     wrap.appendChild(dh);
     if(!items.length){
       wrap.appendChild(el('p','empty-msg','Sin contenido planificado para este día'));
     } else {
       const cl=el('div','content-list');
       items.forEach((item,idx)=>{
-        const row=el('div','content-item');
-        const cb=el('button','check-btn'+(item.done?' done':''),item.done?'✓':'');
-        cb.onclick=()=>{S.data[k][idx].done=!S.data[k][idx].done;save(S.data);render()};
-        const info=el('div','item-info');
-        const title=el('div','item-title'+(item.done?' done':''),item.tipo);
-        const badges=el('div','item-badges');
-        badges.appendChild(el('span','badge badge-area',item.area));
-        getCanales(item).forEach(c=>{const b=el('span','badge badge-canal',c);b.style=`background:${CANAL_BG[c]||'#1C54F4'}`;badges.appendChild(b);});
-        getResps(item).forEach(r=>badges.appendChild(el('span','badge badge-resp',r)));
-        const desc=el('div','item-meta',item.desc||'Sin descripción');
-        info.appendChild(title);info.appendChild(badges);info.appendChild(desc);
-        const eb=el('button','edit-btn','<i class="ti ti-pencil"></i>');
-        eb.title='Editar';
-        eb.onclick=()=>{S.editIdx=idx;S.showModal=true;render()};
-        const db=el('button','del-btn','<i class="ti ti-trash"></i>');
-        db.onclick=()=>{S.data[k].splice(idx,1);if(!S.data[k].length)delete S.data[k];save(S.data);render()};
-        row.appendChild(cb);row.appendChild(info);row.appendChild(eb);row.appendChild(db);
-        cl.appendChild(row);
+        if(item.isEvent){
+          const row=el('div','event-card');
+          const cb=el('button','check-btn'+(item.done?' done':''),item.done?'✓':'');
+          cb.onclick=()=>{S.data[k][idx].done=!S.data[k][idx].done;save(S.data);render()};
+          const info=el('div','item-info');
+          info.appendChild(el('div','event-card-title'+(item.done?' done':''),'📅 '+(item.nombre||'Evento')));
+          const badges=el('div','item-badges');
+          getResps(item).forEach(r=>badges.appendChild(el('span','badge badge-resp',r)));
+          info.appendChild(badges);
+          if(item.desc)info.appendChild(el('div','item-meta',item.desc));
+          const eb=el('button','edit-btn','<i class="ti ti-pencil"></i>');
+          eb.onclick=()=>{S.editIdx=idx;S.eventMode=true;S.showModal=true;render()};
+          const db=el('button','del-btn','<i class="ti ti-trash"></i>');
+          db.onclick=()=>{S.data[k].splice(idx,1);if(!S.data[k].length)delete S.data[k];save(S.data);render()};
+          row.appendChild(cb);row.appendChild(info);row.appendChild(eb);row.appendChild(db);
+          cl.appendChild(row);
+        } else {
+          const row=el('div','content-item');
+          const cb=el('button','check-btn'+(item.done?' done':''),item.done?'✓':'');
+          cb.onclick=()=>{S.data[k][idx].done=!S.data[k][idx].done;save(S.data);render()};
+          const info=el('div','item-info');
+          const title=el('div','item-title'+(item.done?' done':''),item.tipo);
+          const badges=el('div','item-badges');
+          badges.appendChild(el('span','badge badge-area',item.area));
+          getCanales(item).forEach(c=>{const b=el('span','badge badge-canal',c);b.style=`background:${CANAL_BG[c]||'#1C54F4'}`;badges.appendChild(b);});
+          getResps(item).forEach(r=>badges.appendChild(el('span','badge badge-resp',r)));
+          const desc=el('div','item-meta',item.desc||'Sin descripción');
+          info.appendChild(title);info.appendChild(badges);info.appendChild(desc);
+          const eb=el('button','edit-btn','<i class="ti ti-pencil"></i>');
+          eb.onclick=()=>{S.editIdx=idx;S.eventMode=false;S.showModal=true;render()};
+          const db=el('button','del-btn','<i class="ti ti-trash"></i>');
+          db.onclick=()=>{S.data[k].splice(idx,1);if(!S.data[k].length)delete S.data[k];save(S.data);render()};
+          row.appendChild(cb);row.appendChild(info);row.appendChild(eb);row.appendChild(db);
+          cl.appendChild(row);
+        }
       });
       wrap.appendChild(cl);
     }
@@ -682,6 +718,7 @@ function renderAnnual(){
 
 /* ── MODAL ── */
 function chipRow(items,selected,colors){
+
   return items.map((item,i)=>{
     const on=selected.includes(item);
     const bg=colors?colors[i]:null;
@@ -692,6 +729,65 @@ function chipRow(items,selected,colors){
 function renderModal(){
   const k=dayKey(S.year,S.month,S.selectedDay);
   const isEdit=S.editIdx!==null;
+  if(S.eventMode){
+    const item=isEdit?(S.data[k]||[])[S.editIdx]:{nombre:'',resps:[],desc:'',done:false};
+    const selResps=getResps(item);
+    const overlay=el('div','modal-overlay');
+    const m=el('div','modal');
+    m.innerHTML=`
+      <div class="modal-title">
+        <span>${isEdit?'Editar':'Agregar'} evento</span>
+        <button class="modal-close" id="mc">✕</button>
+      </div>
+      <div class="modal-date">${S.selectedDay} de ${MONTHS[S.month]} ${S.year}</div><br>
+      <div class="form-row">
+        <label>Nombre del evento</label>
+        <input type="text" id="fi-nombre" placeholder="Ej: Evento de networking..." value="${item.nombre||''}">
+      </div>
+      <div class="form-row">
+        <label>Responsable</label>
+        <div class="toggle-chips" id="fi-resps">${chipRow(RESPONSABLES,selResps,RESP_COLORS)}</div>
+      </div>
+      <div class="form-row">
+        <label>Descripción / Notas</label>
+        <textarea id="fi-desc" placeholder="Detalles del evento...">${item.desc||''}</textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-check">
+          <input type="checkbox" id="fi-done"${item.done?' checked':''}>
+          <label for="fi-done">Marcar como realizado</label>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary" id="fi-save">${isEdit?'Guardar cambios':'Agregar evento'}</button>
+        ${isEdit?'<button class="btn-secondary" id="fi-del">Eliminar</button>':''}
+      </div>`;
+    overlay.appendChild(m);
+    setTimeout(()=>{
+      m.querySelectorAll('.toggle-chip').forEach(chip=>{
+        chip.addEventListener('click',()=>{
+          chip.classList.toggle('active');
+          if(chip.classList.contains('active')&&chip.dataset.bg){chip.style.background=chip.dataset.bg;chip.style.borderColor=chip.dataset.bg;chip.style.color='white';}
+          else{chip.style.cssText='';}
+        });
+      });
+      document.getElementById('mc').onclick=()=>{S.showModal=false;overlay.remove();render()};
+      document.getElementById('fi-save').onclick=()=>{
+        const nombre=document.getElementById('fi-nombre').value.trim()||'Evento';
+        const resps=[...m.querySelectorAll('#fi-resps .toggle-chip.active')].map(c=>c.dataset.val);
+        const desc=document.getElementById('fi-desc').value;
+        const done=document.getElementById('fi-done').checked;
+        if(!S.data[k])S.data[k]=[];
+        if(isEdit)S.data[k][S.editIdx]={isEvent:true,nombre,resps,desc,done};
+        else S.data[k].push({isEvent:true,nombre,resps,desc,done});
+        save(S.data);S.showModal=false;overlay.remove();render();
+      };
+      const fd=document.getElementById('fi-del');
+      if(fd)fd.onclick=()=>{S.data[k].splice(S.editIdx,1);if(!S.data[k].length)delete S.data[k];save(S.data);S.showModal=false;overlay.remove();S.editIdx=null;render();};
+      overlay.onclick=(e)=>{if(e.target===overlay){S.showModal=false;overlay.remove();render()}};
+    },30);
+    return overlay;
+  }
   const item=isEdit?(S.data[k]||[])[S.editIdx]:{tipo:TIPOS[0],area:AREAS[0],resps:[],canales:[],desc:'',done:false};
   const selCanales=getCanales(item);
   const selResps=getResps(item);
