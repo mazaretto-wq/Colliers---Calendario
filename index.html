@@ -114,6 +114,16 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--c-dg)}
 .legend-dot{width:10px;height:10px;border-radius:1px}
 
+/* ── COMPARTIR / LINKS / TOAST ── */
+.btn-share{background:none;border:1.5px solid var(--c-dark);color:var(--c-dark);border-radius:2px;padding:7px 12px;font-size:11px;cursor:pointer;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;font-family:'Open Sans',Verdana,sans-serif}
+.btn-share:hover{background:var(--c-pbg)}
+.share-btn{background:none;border:none;cursor:pointer;color:var(--c-grey);font-size:14px;padding:2px 4px;margin-top:1px;line-height:1}
+.share-btn:hover{color:var(--c-teal)}
+.item-link{display:inline-block;font-size:11px;font-weight:700;color:var(--c-medium);text-decoration:none;margin-top:3px;word-break:break-all}
+.item-link:hover{text-decoration:underline}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);background:#000759;color:#fff;padding:10px 18px;border-radius:4px;font-size:12px;font-weight:600;z-index:400;opacity:0;pointer-events:none;transition:opacity 0.2s,transform 0.2s;box-shadow:0 6px 20px rgba(0,7,89,0.25);max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
 /* ── TOGGLE CHIPS ── */
 .toggle-chips{display:flex;flex-wrap:wrap;gap:6px;padding:3px 0}
 .toggle-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid var(--c-lg);background:none;color:var(--c-dg);font-family:'Open Sans',Verdana,sans-serif;letter-spacing:0.2px}
@@ -238,6 +248,10 @@ body.dark .area-bar-name{color:#e6edf3}
 body.dark .area-bar-nums{color:#8b949e}
 body.dark .toggle-chip{border-color:#30363d;color:#8b949e}
 body.dark .toggle-chip:hover{border-color:#8b949e}
+body.dark .btn-share{border-color:#30363d;color:#e6edf3}
+body.dark .btn-share:hover{background:#161b22}
+body.dark .item-link{color:#58a6ff}
+body.dark .toast{background:#30363d;color:#e6edf3;border:1px solid #8b949e;box-shadow:0 6px 20px rgba(0,0,0,0.5)}
 </style>
 </head>
 <body>
@@ -256,6 +270,7 @@ body.dark .toggle-chip:hover{border-color:#8b949e}
 <script>
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DAYS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const DAYS_FULL=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const TIPOS=['Post','Story','Reel/Video','Infografía','Newsletter','Artículo','Otro'];
 const AREAS=['Valuaciones','SPS','MKT','Research','Oficinas','Industrias','Retail','Informes de mercado','Consultorías'];
 const CANALES=['IG','Email MKT','LinkedIn','Facebook','X','YouTube'];
@@ -266,6 +281,36 @@ const RESP_COLORS=['#25408F','#1C54F4','#2AB6A9','#353E59'];
 
 function getCanales(it){return Array.isArray(it.canales)?it.canales:(it.canal?[it.canal]:[]);}
 function getResps(it){return Array.isArray(it.resps)?it.resps:(it.resp?[it.resp]:[]);}
+
+/* ── LINKS DE CONTENIDO ──
+   normalizeLink: agrega https:// si el usuario pega la URL sin protocolo.
+   safeHref: sólo devuelve la URL si es http/https, si no devuelve '' (no se linkea). */
+function normalizeLink(v){
+  v=(v||'').trim();
+  if(!v)return '';
+  if(!/^[a-z][a-z0-9+.\-]*:/i.test(v))v='https://'+v;
+  return safeHref(v);
+}
+function safeHref(v){
+  v=(v||'').trim();
+  if(!v)return '';
+  try{
+    const u=new URL(v);
+    return(u.protocol==='http:'||u.protocol==='https:')?u.href:'';
+  }catch(e){return ''}
+}
+// Para mostrar: tolera links guardados sin protocolo, pero nunca devuelve algo que no sea http/https
+function hrefOf(v){return safeHref(v)||normalizeLink(v);}
+function escAttr(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function linkAnchor(v){
+  const href=hrefOf(v);
+  if(!href)return null;
+  const a=el('a','item-link','🔗 Ver contenido');
+  a.href=href;a.target='_blank';a.rel='noopener noreferrer';
+  a.title=href;
+  a.onclick=(e)=>e.stopPropagation();
+  return a;
+}
 
 const firebaseConfig={
   apiKey:"AIzaSyA2sTpsyFt4_SWhinvyGkNlTARw2zctMbw",
@@ -286,6 +331,108 @@ const today=new Date();
 let S={view:'calendar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,eventMode:false,data:{}};
 
 function dayKey(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+
+/* ── LINK DIRECTO A UN DÍA (#AAAA-MM-DD) ── */
+function dayUrl(y,m,d){
+  return location.origin+location.pathname+location.search+'#'+dayKey(y,m,d);
+}
+function applyHash(){
+  const mt=(location.hash||'').match(/^#(\d{4})-(\d{2})-(\d{2})$/);
+  if(!mt)return false;
+  const y=+mt[1],mo=+mt[2]-1,d=+mt[3];
+  if(mo<0||mo>11)return false;
+  if(d<1||d>new Date(y,mo+1,0).getDate())return false;
+  S.view='calendar';S.year=y;S.month=mo;S.selectedDay=d;S.showModal=false;S.editIdx=null;
+  return true;
+}
+// replaceState no dispara hashchange: evita loops y no ensucia el historial
+function syncHash(){
+  const h=S.selectedDay?'#'+dayKey(S.year,S.month,S.selectedDay):'';
+  const url=location.pathname+location.search+h;
+  if(location.pathname+location.search+location.hash!==url){
+    try{history.replaceState(null,'',url)}catch(e){}
+  }
+}
+window.addEventListener('hashchange',()=>{if(applyHash())render()});
+
+/* ── COMPARTIR ── */
+function fmtDateLong(y,m,d){
+  return `${DAYS_FULL[new Date(y,m,d).getDay()]} ${d} de ${MONTHS[m]} de ${y}`;
+}
+function itemToText(it){
+  const L=[];
+  if(it.isEvent){
+    L.push(`📅 EVENTO: ${it.nombre||'Evento'}`);
+    const r=getResps(it);
+    if(r.length)L.push(`   A cargo: ${r.join(', ')}`);
+    L.push(`   Estado: ${it.done?'Realizado':'Pendiente'}`);
+  } else {
+    L.push(`• ${it.tipo||'Contenido'} — ${it.area||'Sin área'}`);
+    const c=getCanales(it);
+    if(c.length)L.push(`   Canal: ${c.join(', ')}`);
+    const r=getResps(it);
+    if(r.length)L.push(`   A cargo: ${r.join(', ')}`);
+    L.push(`   Estado: ${it.done?'Subido':'Pendiente'}`);
+  }
+  const d=(it.desc||'').trim();
+  if(d)L.push(`   ${d.replace(/\s*\n\s*/g,' ')}`);
+  const lk=hrefOf(it.link);
+  if(lk)L.push(`   🔗 Contenido: ${lk}`);
+  return L.join('\n');
+}
+function dayToText(y,m,d){
+  const items=S.data[dayKey(y,m,d)]||[];
+  const done=items.filter(it=>it.done).length,pend=items.length-done;
+  const L=['📅 Colliers — Calendario de Contenidos',fmtDateLong(y,m,d),''];
+  if(!items.length){
+    L.push('Sin contenido planificado para este día.');
+  } else {
+    L.push(`${items.length} ${items.length===1?'ítem':'ítems'} · ${done} ${done===1?'listo':'listos'} · ${pend} ${pend===1?'pendiente':'pendientes'}`);
+    L.push('──────────────────────────');
+    items.forEach(it=>{L.push(itemToText(it));L.push('')});
+  }
+  L.push('');
+  L.push(`🔗 Ver en el calendario: ${dayUrl(y,m,d)}`);
+  return L.join('\n').replace(/\n{3,}/g,'\n\n');
+}
+function itemToShareText(y,m,d,it){
+  return [`📅 Colliers — ${fmtDateLong(y,m,d)}`,'',itemToText(it),'',`🔗 Ver en el calendario: ${dayUrl(y,m,d)}`].join('\n');
+}
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=el('div','toast');t.id='toast';document.body.appendChild(t)}
+  t.textContent=msg;
+  clearTimeout(t._timer);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  t._timer=setTimeout(()=>t.classList.remove('show'),2400);
+}
+function legacyCopy(txt){
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=txt;ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:-1000px;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();ta.setSelectionRange(0,ta.value.length);
+    const ok=document.execCommand('copy');
+    ta.remove();
+    return ok;
+  }catch(e){return false}
+}
+function copyText(txt,msg){
+  const ok=()=>toast(msg||'✓ Copiado al portapapeles');
+  const fail=()=>toast('No se pudo copiar. Copialo a mano.');
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(txt).then(ok).catch(()=>{legacyCopy(txt)?ok():fail()});
+  } else {
+    legacyCopy(txt)?ok():fail();
+  }
+}
+function shareBtn(title,onClick){
+  const b=el('button','share-btn','⧉');
+  b.title=title;
+  b.onclick=(e)=>{e.stopPropagation();onClick()};
+  return b;
+}
 
 function getMonthData(y,m){
   const pre=`${y}-${String(m+1).padStart(2,'0')}-`;
@@ -336,6 +483,7 @@ function svgRing(pct,size=90){
 
 function render(){
   const root=document.getElementById('root');
+  if(S.view==='calendar')syncHash();
   root.innerHTML='';
   root.appendChild(renderTabs());
   if(S.view==='calendar')root.appendChild(renderCalendar());
@@ -445,7 +593,10 @@ function renderCalendar(){
     ab2.onclick=()=>{S.editIdx=null;S.eventMode=false;S.showModal=true;render()};
     const ab3=el('button','btn-add-event','+ Evento');
     ab3.onclick=()=>{S.editIdx=null;S.eventMode=true;S.showModal=true;render()};
-    btnGrp.appendChild(ab2);btnGrp.appendChild(ab3);
+    const sb=el('button','btn-share','⧉ Compartir');
+    sb.title='Copiar el resumen del día con su link';
+    sb.onclick=()=>copyText(dayToText(S.year,S.month,S.selectedDay),'✓ Resumen del día copiado');
+    btnGrp.appendChild(ab2);btnGrp.appendChild(ab3);btnGrp.appendChild(sb);
     dh.appendChild(dt);dh.appendChild(btnGrp);
     wrap.appendChild(dh);
     if(!items.length){
@@ -463,11 +614,14 @@ function renderCalendar(){
           getResps(item).forEach(r=>badges.appendChild(el('span','badge badge-resp',r)));
           info.appendChild(badges);
           if(item.desc)info.appendChild(el('div','item-meta',item.desc));
+          const evLink=linkAnchor(item.link);
+          if(evLink)info.appendChild(evLink);
+          const sbi=shareBtn('Copiar este evento',()=>copyText(itemToShareText(S.year,S.month,S.selectedDay,item),'✓ Evento copiado'));
           const eb=el('button','edit-btn','<i class="ti ti-pencil"></i>');
           eb.onclick=()=>{S.editIdx=idx;S.eventMode=true;S.showModal=true;render()};
           const db=el('button','del-btn','<i class="ti ti-trash"></i>');
           db.onclick=()=>{S.data[k].splice(idx,1);if(!S.data[k].length)delete S.data[k];save(S.data);render()};
-          row.appendChild(cb);row.appendChild(info);row.appendChild(eb);row.appendChild(db);
+          row.appendChild(cb);row.appendChild(info);row.appendChild(sbi);row.appendChild(eb);row.appendChild(db);
           cl.appendChild(row);
         } else {
           const row=el('div','content-item');
@@ -481,11 +635,14 @@ function renderCalendar(){
           getResps(item).forEach(r=>badges.appendChild(el('span','badge badge-resp',r)));
           const desc=el('div','item-meta',item.desc||'Sin descripción');
           info.appendChild(title);info.appendChild(badges);info.appendChild(desc);
+          const ctLink=linkAnchor(item.link);
+          if(ctLink)info.appendChild(ctLink);
+          const sbi=shareBtn('Copiar este contenido',()=>copyText(itemToShareText(S.year,S.month,S.selectedDay,item),'✓ Contenido copiado'));
           const eb=el('button','edit-btn','<i class="ti ti-pencil"></i>');
           eb.onclick=()=>{S.editIdx=idx;S.eventMode=false;S.showModal=true;render()};
           const db=el('button','del-btn','<i class="ti ti-trash"></i>');
           db.onclick=()=>{S.data[k].splice(idx,1);if(!S.data[k].length)delete S.data[k];save(S.data);render()};
-          row.appendChild(cb);row.appendChild(info);row.appendChild(eb);row.appendChild(db);
+          row.appendChild(cb);row.appendChild(info);row.appendChild(sbi);row.appendChild(eb);row.appendChild(db);
           cl.appendChild(row);
         }
       });
@@ -730,7 +887,7 @@ function renderModal(){
   const k=dayKey(S.year,S.month,S.selectedDay);
   const isEdit=S.editIdx!==null;
   if(S.eventMode){
-    const item=isEdit?(S.data[k]||[])[S.editIdx]:{nombre:'',resps:[],desc:'',done:false};
+    const item=isEdit?(S.data[k]||[])[S.editIdx]:{nombre:'',resps:[],desc:'',link:'',done:false};
     const selResps=getResps(item);
     const overlay=el('div','modal-overlay');
     const m=el('div','modal');
@@ -751,6 +908,10 @@ function renderModal(){
       <div class="form-row">
         <label>Descripción / Notas</label>
         <textarea id="fi-desc" placeholder="Detalles del evento...">${item.desc||''}</textarea>
+      </div>
+      <div class="form-row">
+        <label>Link del contenido</label>
+        <input type="text" id="fi-link" placeholder="drive.google.com/... (se agrega https:// solo)" value="${escAttr(item.link||'')}">
       </div>
       <div class="form-row">
         <div class="form-check">
@@ -776,10 +937,11 @@ function renderModal(){
         const nombre=document.getElementById('fi-nombre').value.trim()||'Evento';
         const resps=[...m.querySelectorAll('#fi-resps .toggle-chip.active')].map(c=>c.dataset.val);
         const desc=document.getElementById('fi-desc').value;
+        const link=normalizeLink(document.getElementById('fi-link').value);
         const done=document.getElementById('fi-done').checked;
         if(!S.data[k])S.data[k]=[];
-        if(isEdit)S.data[k][S.editIdx]={isEvent:true,nombre,resps,desc,done};
-        else S.data[k].push({isEvent:true,nombre,resps,desc,done});
+        if(isEdit)S.data[k][S.editIdx]={isEvent:true,nombre,resps,desc,link,done};
+        else S.data[k].push({isEvent:true,nombre,resps,desc,link,done});
         save(S.data);S.showModal=false;overlay.remove();render();
       };
       const fd=document.getElementById('fi-del');
@@ -788,7 +950,7 @@ function renderModal(){
     },30);
     return overlay;
   }
-  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tipo:TIPOS[0],area:AREAS[0],resps:[],canales:[],desc:'',done:false};
+  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tipo:TIPOS[0],area:AREAS[0],resps:[],canales:[],desc:'',link:'',done:false};
   const selCanales=getCanales(item);
   const selResps=getResps(item);
   const overlay=el('div','modal-overlay');
@@ -818,6 +980,10 @@ function renderModal(){
     <div class="form-row">
       <label>Descripción</label>
       <textarea id="fi-desc" placeholder="Ej: Post sobre lanzamiento en Oficinas...">${item.desc||''}</textarea>
+    </div>
+    <div class="form-row">
+      <label>Link del contenido</label>
+      <input type="text" id="fi-link" placeholder="drive.google.com/... (se agrega https:// solo)" value="${escAttr(item.link||'')}">
     </div>
     <div class="form-row">
       <div class="form-check">
@@ -850,10 +1016,11 @@ function renderModal(){
       const resps=[...m.querySelectorAll('#fi-resps .toggle-chip.active')].map(c=>c.dataset.val);
       const canales=[...m.querySelectorAll('#fi-canales .toggle-chip.active')].map(c=>c.dataset.val);
       const desc=document.getElementById('fi-desc').value;
+      const link=normalizeLink(document.getElementById('fi-link').value);
       const done=document.getElementById('fi-done').checked;
       if(!S.data[k])S.data[k]=[];
-      if(isEdit)S.data[k][S.editIdx]={tipo,area,resps,canales,desc,done};
-      else S.data[k].push({tipo,area,resps,canales,desc,done});
+      if(isEdit)S.data[k][S.editIdx]={tipo,area,resps,canales,desc,link,done};
+      else S.data[k].push({tipo,area,resps,canales,desc,link,done});
       save(S.data);S.showModal=false;overlay.remove();render();
     };
     const fd=document.getElementById('fi-del');
@@ -866,6 +1033,10 @@ function renderModal(){
   },30);
   return overlay;
 }
+
+// Link directo (#AAAA-MM-DD): posicionar el calendario antes del primer render
+applyHash();
+render();
 
 calendarRef.on('value',(snap)=>{S.data=snap.val()||{};render();});
 
