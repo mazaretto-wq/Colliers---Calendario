@@ -126,6 +126,37 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 .share-btn:hover{color:var(--c-teal)}
 .item-link{display:inline-block;font-size:11px;font-weight:700;color:var(--c-medium);text-decoration:none;margin-top:3px;word-break:break-all}
 .item-link:hover{text-decoration:underline}
+/* ── TEMARIO ── */
+.tem-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.tem-input{font-size:12px;border-radius:2px;border:1.5px solid var(--c-lg);padding:7px 9px;background:var(--c-white);color:var(--c-deep);font-family:'Open Sans',Verdana,sans-serif}
+.tem-input:focus{outline:none;border-color:var(--c-medium)}
+.tem-search{flex:1;min-width:190px}
+.tem-count{font-size:11px;color:var(--c-mg);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tem-active-tag{font-size:10px;font-weight:700;background:var(--c-medium);color:#fff;border:none;border-radius:10px;padding:3px 9px;cursor:pointer;font-family:'Open Sans',Verdana,sans-serif}
+.tem-group{margin-bottom:16px}
+.tem-g-title{display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--c-pbg);margin-bottom:2px}
+.tem-g-name{font-size:12px;font-weight:700;color:var(--c-deep);letter-spacing:0.2px}
+.tem-g-count{font-size:10px;font-weight:700;color:var(--c-medium);background:var(--c-pbg);border-radius:10px;padding:2px 8px;flex-shrink:0}
+.tem-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--c-pbg)}
+.tem-row:last-child{border-bottom:none}
+.tem-date{font-size:10px;font-weight:700;color:var(--c-medium);background:none;border:none;cursor:pointer;padding:3px 0;width:86px;flex-shrink:0;text-align:left;font-family:'Open Sans',Verdana,sans-serif;letter-spacing:0.2px}
+.tem-date:hover{text-decoration:underline}
+.tem-body{flex:1;min-width:0}
+.tem-tema{font-size:13px;font-weight:600;color:var(--c-deep)}
+.tem-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.tem-tag{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--c-pbg);color:var(--c-dark);border:none;cursor:pointer;font-family:'Open Sans',Verdana,sans-serif}
+.tem-tag:hover{background:var(--c-lg)}
+.tem-tag.on{background:var(--c-medium);color:#fff}
+.tem-state{font-size:9px;font-weight:700;padding:2px 7px;border-radius:1px;flex-shrink:0;margin-top:2px;letter-spacing:0.2px}
+.tem-state.ok{background:rgba(42,182,169,0.16);color:#1d8177}
+.tem-state.no{background:rgba(237,27,52,0.12);color:var(--c-red)}
+.tem-trunc{font-size:10px;color:var(--c-mg);font-style:italic;padding:6px 0 0 96px}
+.dup-warn{margin-top:6px;border:1px solid rgba(237,27,52,0.4);background:rgba(237,27,52,0.07);border-radius:3px;padding:7px 9px}
+.dup-warn-title{font-size:10px;font-weight:700;color:var(--c-red);margin-bottom:4px}
+.dup-warn-item{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:11px;color:var(--c-dark);padding:2px 0;font-family:'Open Sans',Verdana,sans-serif}
+.dup-warn-item:hover{text-decoration:underline;color:var(--c-medium)}
+.label-hint{font-weight:400;text-transform:none;letter-spacing:0;color:var(--c-mg)}
+@media(max-width:600px){.tab{padding:9px 11px;font-size:11px}}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);background:#000759;color:#fff;padding:10px 18px;border-radius:4px;font-size:12px;font-weight:600;z-index:400;opacity:0;pointer-events:none;transition:opacity 0.2s,transform 0.2s;box-shadow:0 6px 20px rgba(0,7,89,0.25);max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -260,6 +291,18 @@ body.dark .toggle-chip:hover{border-color:#8b949e}
 body.dark .btn-share{border-color:#30363d;color:#e6edf3}
 body.dark .btn-share:hover{background:#161b22}
 body.dark .item-link{color:#58a6ff}
+body.dark .tem-input{background:#0d1117;color:#e6edf3;border-color:#30363d}
+body.dark .tem-input:focus{border-color:var(--c-medium)}
+body.dark .tem-g-name,body.dark .tem-tema{color:#e6edf3}
+body.dark .tem-g-count{background:#30363d;color:#58a6ff}
+body.dark .tem-g-title,body.dark .tem-row{border-color:#30363d}
+body.dark .tem-date{color:#58a6ff}
+body.dark .tem-tag{background:#30363d;color:#e6edf3}
+body.dark .tem-tag:hover{background:#3d4650}
+body.dark .tem-tag.on{background:var(--c-medium);color:#fff}
+body.dark .tem-state.ok{background:rgba(42,182,169,0.2);color:#39c9bb}
+body.dark .dup-warn{background:rgba(237,27,52,0.13);border-color:rgba(237,27,52,0.45)}
+body.dark .dup-warn-item{color:#e6edf3}
 body.dark .toast{background:#30363d;color:#e6edf3;border:1px solid #8b949e;box-shadow:0 6px 20px rgba(0,0,0,0.5)}
 </style>
 </head>
@@ -321,6 +364,90 @@ function linkAnchor(v){
   return a;
 }
 
+/* ── TEMARIO: índice derivado del calendario ──
+   No hay una segunda fuente de datos: todo sale de S.data, así que nada se
+   carga dos veces ni se desincroniza. */
+function allItems(){
+  const out=[];
+  Object.keys(S.data).forEach(k=>{
+    const mt=k.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!mt)return;
+    (S.data[k]||[]).forEach((it,idx)=>{
+      if(it)out.push({k,y:+mt[1],m:+mt[2]-1,d:+mt[3],idx,it});
+    });
+  });
+  return out.sort((a,b)=>a.k<b.k?1:(a.k>b.k?-1:a.idx-b.idx)); // más reciente primero
+}
+// Tema: campo propio si existe; si no, se deduce de lo que ya había cargado
+function temaOf(it){
+  if(it.tema&&it.tema.trim())return it.tema.trim();
+  if(it.isEvent)return (it.nombre||'Evento').trim();
+  const d=(it.desc||'').trim();
+  if(d)return d.split('\n')[0].slice(0,90);
+  return it.tipo||'Contenido';
+}
+function getTags(it){
+  if(Array.isArray(it.tags))return it.tags.filter(t=>t&&String(t).trim());
+  if(typeof it.tags==='string')return parseTags(it.tags);
+  return [];
+}
+function parseTags(str){
+  const seen=new Set(),out=[];
+  (str||'').split(/[,;]+/).forEach(s=>{
+    const t=s.trim().replace(/\s+/g,' ');
+    if(!t)return;
+    const l=t.toLowerCase();
+    if(seen.has(l))return;
+    seen.add(l);out.push(t);
+  });
+  return out.slice(0,12);
+}
+// Etiquetas sugeridas: se arman solas con lo ya cargado, no hay lista fija que mantener
+function allTags(){
+  const seen=new Map();
+  allItems().forEach(r=>getTags(r.it).forEach(t=>{
+    const l=t.toLowerCase();
+    if(!seen.has(l))seen.set(l,t);
+  }));
+  return [...seen.values()].sort((a,b)=>a.localeCompare(b,'es'));
+}
+function allTemas(){
+  const seen=new Map();
+  allItems().forEach(r=>{
+    const t=temaOf(r.it),l=norm(t);
+    if(l&&!seen.has(l))seen.set(l,t);
+  });
+  return [...seen.values()].sort((a,b)=>a.localeCompare(b,'es'));
+}
+
+/* ── Búsqueda y detección de repetidos ── */
+const STOPWORDS=new Set(['de','del','la','el','los','las','en','y','a','para','con','por','un','una','unos','unas','sobre','al','que','se','su','sus','lo','o','como','desde','entre','mas','más']);
+function norm(s){
+  return String(s==null?'':s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function keyWords(s){return norm(s).split(' ').filter(w=>w.length>2&&!STOPWORDS.has(w))}
+function similarity(a,b){
+  const A=new Set(keyWords(a)),B=new Set(keyWords(b));
+  if(!A.size||!B.size)return 0;
+  let inter=0;
+  A.forEach(w=>{if(B.has(w))inter++});
+  return inter/Math.min(A.size,B.size);
+}
+function similarItems(text,exKey,exIdx,limit){
+  if(keyWords(text).length<1)return [];
+  return allItems()
+    .map(r=>Object.assign({score:similarity(text,temaOf(r.it)+' '+getTags(r.it).join(' '))},r))
+    .filter(r=>r.score>=0.5&&!(r.k===exKey&&r.idx===exIdx))
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,limit||4);
+}
+function haystack(r){
+  const it=r.it;
+  return norm([temaOf(it),it.desc,getTags(it).join(' '),it.area,it.tipo,
+    getCanales(it).join(' '),getResps(it).join(' '),it.isEvent?'evento':''].join(' '));
+}
+
 const firebaseConfig={
   apiKey:"AIzaSyA2sTpsyFt4_SWhinvyGkNlTARw2zctMbw",
   authDomain:"colliers-calendar.firebaseapp.com",
@@ -337,7 +464,9 @@ const calendarRef=firebaseDb.ref('calendar_data');
 function save(d){calendarRef.set(d||{})}
 
 const today=new Date();
-let S={view:'calendar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,eventMode:false,data:{}};
+let S={view:'calendar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,eventMode:false,data:{},
+  q:'',fAnio:'',fArea:'',fCanal:'',fTipo:'',fEstado:'',fTag:'',groupBy:'tema',temLimit:150};
+const TEM_PAGE=150;
 
 function dayKey(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 
@@ -346,6 +475,7 @@ function dayUrl(y,m,d){
   return location.origin+location.pathname+location.search+'#'+dayKey(y,m,d);
 }
 function applyHash(){
+  if((location.hash||'').toLowerCase()==='#temario'){S.view='temario';S.showModal=false;return true}
   const mt=(location.hash||'').match(/^#(\d{4})-(\d{2})-(\d{2})$/);
   if(!mt)return false;
   const y=+mt[1],mo=+mt[2]-1,d=+mt[3];
@@ -356,7 +486,9 @@ function applyHash(){
 }
 // replaceState no dispara hashchange: evita loops y no ensucia el historial
 function syncHash(){
-  const h=S.selectedDay?'#'+dayKey(S.year,S.month,S.selectedDay):'';
+  let h='';
+  if(S.view==='calendar')h=S.selectedDay?'#'+dayKey(S.year,S.month,S.selectedDay):'';
+  else if(S.view==='temario')h='#temario';
   const url=location.pathname+location.search+h;
   if(location.pathname+location.search+location.hash!==url){
     try{history.replaceState(null,'',url)}catch(e){}
@@ -376,13 +508,21 @@ function itemToText(it){
     if(r.length)L.push(`   A cargo: ${r.join(', ')}`);
     L.push(`   Estado: ${it.done?'Realizado':'Pendiente'}`);
   } else {
-    L.push(`• ${it.tipo||'Contenido'} — ${it.area||'Sin área'}`);
+    const tema=(it.tema||'').trim();
+    if(tema){
+      L.push(`• ${tema}`);
+      L.push(`   ${it.tipo||'Contenido'} — ${it.area||'Sin área'}`);
+    } else {
+      L.push(`• ${it.tipo||'Contenido'} — ${it.area||'Sin área'}`);
+    }
     const c=getCanales(it);
     if(c.length)L.push(`   Canal: ${c.join(', ')}`);
     const r=getResps(it);
     if(r.length)L.push(`   A cargo: ${r.join(', ')}`);
     L.push(`   Estado: ${it.done?'Subido':'Pendiente'}`);
   }
+  const tg=getTags(it);
+  if(tg.length)L.push(`   Etiquetas: ${tg.join(', ')}`);
   const d=(it.desc||'').trim();
   if(d)L.push(`   ${d.replace(/\s*\n\s*/g,' ')}`);
   const lk=hrefOf(it.link);
@@ -505,23 +645,42 @@ function svgRing(pct,size=90){
 
 function render(){
   const root=document.getElementById('root');
-  if(S.view==='calendar')syncHash();
+  syncHash();
+  // Guardar el foco: un refresh de Firebase no debe cortar lo que se está tipeando
+  const ae=document.activeElement,aid=ae&&ae.id?ae.id:null;
+  const caret=(aid&&typeof ae.selectionStart==='number')?[ae.selectionStart,ae.selectionEnd]:null;
   root.innerHTML='';
   root.appendChild(renderTabs());
   if(S.view==='calendar')root.appendChild(renderCalendar());
+  else if(S.view==='temario')root.appendChild(renderTemario());
   else if(S.view==='monthly')root.appendChild(renderMonthly());
   else root.appendChild(renderAnnual());
   if(S.showModal)document.body.appendChild(renderModal());
+  if(aid){
+    const n=document.getElementById(aid);
+    if(n&&n!==document.activeElement){
+      n.focus();
+      if(caret&&n.setSelectionRange)try{n.setSelectionRange(caret[0],caret[1])}catch(e){}
+    }
+  }
 }
 
 function renderTabs(){
   const d=el('div','tabs');
-  [['calendar','Calendario'],['monthly','Dashboard Mes'],['annual','Dashboard Anual']].forEach(([v,l])=>{
+  [['calendar','Calendario'],['temario','Temario'],['monthly','Dashboard Mes'],['annual','Dashboard Anual']].forEach(([v,l])=>{
     const b=el('button','tab'+(S.view===v?' active':''),l);
     b.onclick=()=>{S.view=v;render()};
     d.appendChild(b);
   });
   return d;
+}
+
+// Crea un elemento con texto plano (para datos cargados por el usuario)
+function txt(tag,cls,text){
+  const e=document.createElement(tag);
+  if(cls)e.className=cls;
+  e.textContent=text==null?'':String(text);
+  return e;
 }
 
 function navRow(title,onPrev,onNext){
@@ -668,8 +827,10 @@ function renderCalendar(){
           const cb=el('button','check-btn'+(item.done?' done':''),item.done?'✓':'');
           cb.onclick=()=>{S.data[k][idx].done=!S.data[k][idx].done;save(S.data);render()};
           const info=el('div','item-info');
-          const title=el('div','item-title'+(item.done?' done':''),item.tipo);
+          const hasTema=!!(item.tema&&item.tema.trim());
+          const title=txt('div','item-title'+(item.done?' done':''),hasTema?item.tema.trim():item.tipo);
           const badges=el('div','item-badges');
+          if(hasTema&&item.tipo)badges.appendChild(txt('span','badge badge-resp',item.tipo));
           badges.appendChild(el('span','badge badge-area',item.area));
           getCanales(item).forEach(c=>{const b=el('span','badge badge-canal',c);b.style=`background:${CANAL_BG[c]||'#1C54F4'}`;badges.appendChild(b);});
           getResps(item).forEach(r=>badges.appendChild(el('span','badge badge-resp',r)));
@@ -690,6 +851,224 @@ function renderCalendar(){
     }
   }
   return wrap;
+}
+
+/* ── TEMARIO ──
+   Índice buscable de todo lo cargado, para no repetir contenido.
+   Se repinta solo el listado (no toda la app) para no perder el foco al tipear. */
+let temResults=null;
+
+function temFiltered(){
+  const qt=norm(S.q).split(' ').filter(Boolean);
+  return allItems().filter(r=>{
+    const it=r.it;
+    if(S.fAnio&&String(r.y)!==S.fAnio)return false;
+    if(S.fArea&&(it.isEvent||it.area!==S.fArea))return false;
+    if(S.fCanal&&!getCanales(it).includes(S.fCanal))return false;
+    if(S.fTipo==='Evento'){if(!it.isEvent)return false}
+    else if(S.fTipo&&(it.isEvent||it.tipo!==S.fTipo))return false;
+    if(S.fEstado==='done'&&!it.done)return false;
+    if(S.fEstado==='pend'&&it.done)return false;
+    if(S.fTag&&!getTags(it).some(t=>t.toLowerCase()===S.fTag.toLowerCase()))return false;
+    if(qt.length){const h=haystack(r);if(!qt.every(t=>h.includes(t)))return false}
+    return true;
+  });
+}
+
+function groupNameOf(r){
+  if(S.groupBy==='tema')return temaOf(r.it);
+  if(S.groupBy==='mes')return MONTHS[r.m]+' '+r.y;
+  if(S.groupBy==='area')return r.it.isEvent?'Eventos':(r.it.area||'Sin área');
+  return '';
+}
+function temGroups(rows){
+  const g=new Map();
+  rows.forEach(r=>{
+    const name=groupNameOf(r);
+    const key=S.groupBy==='tema'?(norm(name)||name):name;
+    if(!g.has(key))g.set(key,{name,list:[]});
+    g.get(key).list.push(r);
+  });
+  const entries=[...g.values()];
+  // 'mes' y 'ninguno' ya vienen ordenados por fecha; tema y área, por volumen
+  if(S.groupBy==='tema'||S.groupBy==='area')
+    entries.sort((a,b)=>b.list.length-a.list.length||a.name.localeCompare(b.name,'es'));
+  return entries;
+}
+
+function temFilterLabels(){
+  const f=[];
+  if(S.q)f.push(`"${S.q}"`);
+  if(S.fAnio)f.push(S.fAnio);
+  if(S.fArea)f.push(S.fArea);
+  if(S.fCanal)f.push(S.fCanal);
+  if(S.fTipo)f.push(S.fTipo);
+  if(S.fTag)f.push('#'+S.fTag);
+  if(S.fEstado)f.push(S.fEstado==='done'?'sólo subidos':'sólo pendientes');
+  return f;
+}
+
+function temRow(r){
+  const it=r.it;
+  const row=el('div','tem-row');
+  const dt=txt('button','tem-date',`${String(r.d).padStart(2,'0')} ${MONTHS[r.m].slice(0,3)} ${r.y}`);
+  dt.type='button';dt.title='Ir a ese día en el calendario';
+  dt.onclick=()=>{S.view='calendar';S.year=r.y;S.month=r.m;S.selectedDay=r.d;S.editIdx=null;render()};
+  const body=el('div','tem-body');
+  body.appendChild(txt('div','tem-tema',(it.isEvent?'📅 ':'')+temaOf(it)));
+  const badges=el('div','item-badges');
+  if(!it.isEvent){
+    if(it.area)badges.appendChild(txt('span','badge badge-area',it.area));
+    if(it.tipo)badges.appendChild(txt('span','badge badge-resp',it.tipo));
+  }
+  getCanales(it).forEach(c=>{
+    const b=txt('span','badge badge-canal',c);
+    b.style=`background:${CANAL_BG[c]||'#1C54F4'}`;
+    badges.appendChild(b);
+  });
+  getResps(it).forEach(x=>badges.appendChild(txt('span','badge badge-resp',x)));
+  if(badges.children.length)body.appendChild(badges);
+  const tags=getTags(it);
+  if(tags.length){
+    const tw=el('div','tem-tags');
+    tags.forEach(t=>{
+      const on=S.fTag&&S.fTag.toLowerCase()===t.toLowerCase();
+      const b=txt('button','tem-tag'+(on?' on':''),t);
+      b.type='button';b.title=on?'Quitar filtro':'Filtrar por esta etiqueta';
+      b.onclick=()=>{S.fTag=on?'':t;S.temLimit=TEM_PAGE;paintTemario()};
+      tw.appendChild(b);
+    });
+    body.appendChild(tw);
+  }
+  const lk=linkAnchor(it.link);
+  if(lk)body.appendChild(lk);
+  row.appendChild(dt);row.appendChild(body);
+  row.appendChild(txt('span','tem-state '+(it.done?'ok':'no'),it.done?(it.isEvent?'Realizado':'Subido'):'Pendiente'));
+  return row;
+}
+
+function paintTemario(){
+  if(!temResults)return;
+  temResults.innerHTML='';
+  const rows=temFiltered();
+  const done=rows.filter(r=>r.it.done).length;
+
+  const head=el('div','tem-count');
+  const pend=rows.length-done;
+  head.appendChild(txt('span','',`${rows.length} ${rows.length===1?'ítem':'ítems'} · ${done} ${done===1?'subido':'subidos'} · ${pend} ${pend===1?'pendiente':'pendientes'}`));
+  if(S.fTag){
+    const chip=txt('button','tem-active-tag','#'+S.fTag+' ✕');
+    chip.type='button';chip.title='Quitar filtro de etiqueta';
+    chip.onclick=()=>{S.fTag='';S.temLimit=TEM_PAGE;paintTemario()};
+    head.appendChild(chip);
+  }
+  temResults.appendChild(head);
+
+  if(!rows.length){
+    temResults.appendChild(el('p','empty-msg',
+      allItems().length?'No hay contenidos que coincidan con esos filtros':'Todavía no hay contenido cargado'));
+    return;
+  }
+
+  // Se recortan las filas dibujadas, no los grupos: los contadores siguen siendo reales
+  let budget=S.temLimit;
+  temGroups(rows).forEach(g=>{
+    if(budget<=0)return;
+    const sec=el('div','tem-group');
+    if(S.groupBy!=='ninguno'){
+      const t=el('div','tem-g-title');
+      t.appendChild(txt('span','tem-g-name',g.name||'Sin dato'));
+      t.appendChild(txt('span','tem-g-count',g.list.length));
+      sec.appendChild(t);
+    }
+    const take=g.list.slice(0,budget);
+    take.forEach(r=>sec.appendChild(temRow(r)));
+    if(take.length<g.list.length)
+      sec.appendChild(txt('div','tem-trunc',`+${g.list.length-take.length} más en este grupo`));
+    budget-=take.length;
+    temResults.appendChild(sec);
+  });
+  const shown=Math.min(S.temLimit,rows.length);
+  if(rows.length>shown){
+    const more=el('button','nav-btn',`Ver más (${rows.length-shown} restantes)`);
+    more.style='display:block;margin:14px auto 0;padding:7px 18px;font-size:12px';
+    more.onclick=()=>{S.temLimit+=TEM_PAGE;paintTemario()};
+    temResults.appendChild(more);
+  }
+}
+
+function temSelect(id,placeholder,options,value,set){
+  const s=document.createElement('select');
+  s.className='tem-input';s.id=id;
+  s.innerHTML=[`<option value="">${escAttr(placeholder)}</option>`].concat(options.map(o=>{
+    const v=Array.isArray(o)?o[0]:o,l=Array.isArray(o)?o[1]:o;
+    return `<option value="${escAttr(v)}"${v===value?' selected':''}>${escAttr(l)}</option>`;
+  })).join('');
+  s.onchange=()=>{set(s.value);S.temLimit=TEM_PAGE;paintTemario()};
+  return s;
+}
+
+function renderTemario(){
+  const wrap=el('div');
+  const tb=el('div','tem-toolbar');
+
+  const q=document.createElement('input');
+  q.type='text';q.id='tem-q';q.className='tem-input tem-search';q.autocomplete='off';
+  q.placeholder='Buscar tema, etiqueta, área, canal, responsable…';
+  q.value=S.q;
+  q.oninput=()=>{S.q=q.value;S.temLimit=TEM_PAGE;paintTemario()};
+  tb.appendChild(q);
+
+  const years=[...new Set(allItems().map(r=>r.y))].sort((a,b)=>b-a).map(String);
+  tb.appendChild(temSelect('tem-anio','Todos los años',years,S.fAnio,v=>S.fAnio=v));
+  tb.appendChild(temSelect('tem-area','Todas las áreas',AREAS,S.fArea,v=>S.fArea=v));
+  tb.appendChild(temSelect('tem-canal','Todos los canales',CANALES,S.fCanal,v=>S.fCanal=v));
+  tb.appendChild(temSelect('tem-tipo','Todos los tipos',TIPOS.concat(['Evento']),S.fTipo,v=>S.fTipo=v));
+  tb.appendChild(temSelect('tem-estado','Todos los estados',[['done','Subidos'],['pend','Pendientes']],S.fEstado,v=>S.fEstado=v));
+  tb.appendChild(temSelect('tem-group','Agrupar por…',
+    [['tema','Por tema'],['area','Por área'],['mes','Por mes'],['ninguno','Sin agrupar']],S.groupBy,v=>S.groupBy=v||'tema'));
+
+  const clr=el('button','nav-btn','Limpiar');
+  clr.style='padding:7px 12px;font-size:11px;font-weight:600';
+  clr.title='Quitar todos los filtros';
+  clr.onclick=()=>{S.q='';S.fAnio='';S.fArea='';S.fCanal='';S.fTipo='';S.fEstado='';S.fTag='';S.temLimit=TEM_PAGE;render()};
+  tb.appendChild(clr);
+
+  const cp=el('button','btn-share','⧉ Copiar temario');
+  cp.onclick=()=>copyText(temarioToText(temFiltered()),'✓ Temario copiado');
+  tb.appendChild(cp);
+
+  wrap.appendChild(tb);
+  temResults=el('div','');
+  wrap.appendChild(temResults);
+  paintTemario();
+  return wrap;
+}
+
+function temarioToText(rows){
+  const done=rows.filter(r=>r.it.done).length;
+  const L=['📚 Colliers — Temario de contenidos'];
+  const f=temFilterLabels();
+  if(f.length)L.push('Filtros: '+f.join(' · '));
+  const pend=rows.length-done;
+  L.push(`${rows.length} ${rows.length===1?'ítem':'ítems'} · ${done} ${done===1?'subido':'subidos'} · ${pend} ${pend===1?'pendiente':'pendientes'}`);
+  L.push('──────────────────────────');
+  temGroups(rows).forEach(g=>{
+    if(S.groupBy!=='ninguno')L.push(`▸ ${g.name||'Sin dato'} (${g.list.length})`);
+    g.list.forEach(r=>{
+      const it=r.it;
+      const bits=[`${r.k}`];
+      if(S.groupBy!=='tema')bits.push(temaOf(it));
+      bits.push(it.isEvent?'Evento':`${it.tipo||'Contenido'} — ${it.area||'Sin área'}`);
+      const c=getCanales(it);if(c.length)bits.push(c.join('/'));
+      bits.push(it.done?(it.isEvent?'Realizado':'Subido'):'Pendiente');
+      const lk=hrefOf(it.link);if(lk)bits.push(lk);
+      L.push('   '+bits.join(' · '));
+    });
+    L.push('');
+  });
+  L.push(`🔗 Temario completo: ${location.origin+location.pathname+location.search}#temario`);
+  return L.join('\n').replace(/\n{3,}/g,'\n\n');
 }
 
 /* ── DASHBOARD MENSUAL ── */
@@ -914,6 +1293,44 @@ function renderAnnual(){
 }
 
 /* ── MODAL ── */
+// Sugerencias de temas y etiquetas armadas con lo ya cargado
+function dataLists(){
+  const opt=v=>`<option value="${escAttr(v)}"></option>`;
+  return `<datalist id="dl-temas">${allTemas().slice(0,400).map(opt).join('')}</datalist>`+
+         `<datalist id="dl-tags">${allTags().slice(0,400).map(opt).join('')}</datalist>`;
+}
+
+// Avisa si el tema que se está cargando se parece a algo que ya existe
+function bindDupCheck(overlay){
+  const input=document.getElementById('fi-tema');
+  const box=document.getElementById('dup-warn');
+  if(!input||!box)return;
+  const k=dayKey(S.year,S.month,S.selectedDay);
+  const exIdx=S.editIdx===null?-1:S.editIdx;
+  const check=()=>{
+    const sims=similarItems(input.value,k,exIdx);
+    box.innerHTML='';
+    if(!sims.length){box.style.display='none';return}
+    box.style.display='block';
+    box.appendChild(txt('div','dup-warn-title',
+      `⚠ Ya hay ${sims.length} ${sims.length===1?'contenido parecido':'contenidos parecidos'}:`));
+    sims.forEach(r=>{
+      const b=txt('button','dup-warn-item',
+        `${r.k} · ${temaOf(r.it)} · ${r.it.done?'subido':'pendiente'}`);
+      b.type='button';b.title='Ver ese día en el calendario';
+      b.onclick=()=>{
+        S.showModal=false;overlay.remove();S.editIdx=null;
+        S.view='calendar';S.year=r.y;S.month=r.m;S.selectedDay=r.d;
+        render();
+      };
+      box.appendChild(b);
+    });
+  };
+  let timer=null;
+  input.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(check,180)});
+  check();
+}
+
 function chipRow(items,selected,colors){
 
   return items.map((item,i)=>{
@@ -927,7 +1344,7 @@ function renderModal(){
   const k=dayKey(S.year,S.month,S.selectedDay);
   const isEdit=S.editIdx!==null;
   if(S.eventMode){
-    const item=isEdit?(S.data[k]||[])[S.editIdx]:{nombre:'',resps:[],desc:'',link:'',done:false};
+    const item=isEdit?(S.data[k]||[])[S.editIdx]:{nombre:'',resps:[],tags:[],desc:'',link:'',done:false};
     const selResps=getResps(item);
     const overlay=el('div','modal-overlay');
     const m=el('div','modal');
@@ -950,9 +1367,14 @@ function renderModal(){
         <textarea id="fi-desc" placeholder="Detalles del evento...">${item.desc||''}</textarea>
       </div>
       <div class="form-row">
+        <label>Etiquetas <span class="label-hint">(separadas por coma)</span></label>
+        <input type="text" id="fi-tags" placeholder="networking, clientes" value="${escAttr(getTags(item).join(', '))}" list="dl-tags" autocomplete="off">
+      </div>
+      <div class="form-row">
         <label>Link del contenido</label>
         <input type="text" id="fi-link" placeholder="drive.google.com/... (se agrega https:// solo)" value="${escAttr(item.link||'')}">
       </div>
+      ${dataLists()}
       <div class="form-row">
         <div class="form-check">
           <input type="checkbox" id="fi-done"${item.done?' checked':''}>
@@ -977,11 +1399,12 @@ function renderModal(){
         const nombre=document.getElementById('fi-nombre').value.trim()||'Evento';
         const resps=[...m.querySelectorAll('#fi-resps .toggle-chip.active')].map(c=>c.dataset.val);
         const desc=document.getElementById('fi-desc').value;
+        const tags=parseTags(document.getElementById('fi-tags').value);
         const link=normalizeLink(document.getElementById('fi-link').value);
         const done=document.getElementById('fi-done').checked;
         if(!S.data[k])S.data[k]=[];
-        if(isEdit)S.data[k][S.editIdx]={isEvent:true,nombre,resps,desc,link,done};
-        else S.data[k].push({isEvent:true,nombre,resps,desc,link,done});
+        if(isEdit)S.data[k][S.editIdx]={isEvent:true,nombre,resps,tags,desc,link,done};
+        else S.data[k].push({isEvent:true,nombre,resps,tags,desc,link,done});
         save(S.data);S.showModal=false;overlay.remove();render();
       };
       const fd=document.getElementById('fi-del');
@@ -990,7 +1413,7 @@ function renderModal(){
     },30);
     return overlay;
   }
-  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tipo:TIPOS[0],area:AREAS[0],resps:[],canales:[],desc:'',link:'',done:false};
+  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tema:'',tipo:TIPOS[0],area:AREAS[0],resps:[],canales:[],tags:[],desc:'',link:'',done:false};
   const selCanales=getCanales(item);
   const selResps=getResps(item);
   const overlay=el('div','modal-overlay');
@@ -1001,6 +1424,11 @@ function renderModal(){
       <button class="modal-close" id="mc">✕</button>
     </div>
     <div class="modal-date">${S.selectedDay} de ${MONTHS[S.month]} ${S.year}</div><br>
+    <div class="form-row">
+      <label>Tema / Título</label>
+      <input type="text" id="fi-tema" placeholder="Ej: Informe de oficinas Q3" value="${escAttr(item.tema||'')}" list="dl-temas" autocomplete="off">
+      <div class="dup-warn" id="dup-warn" style="display:none"></div>
+    </div>
     <div class="form-row">
       <label>Tipo de contenido</label>
       <select id="fi-tipo">${TIPOS.map(t=>`<option${t===item.tipo?' selected':''}>${t}</option>`).join('')}</select>
@@ -1022,9 +1450,14 @@ function renderModal(){
       <textarea id="fi-desc" placeholder="Ej: Post sobre lanzamiento en Oficinas...">${item.desc||''}</textarea>
     </div>
     <div class="form-row">
+      <label>Etiquetas <span class="label-hint">(separadas por coma)</span></label>
+      <input type="text" id="fi-tags" placeholder="oficinas, informe, q3" value="${escAttr(getTags(item).join(', '))}" list="dl-tags" autocomplete="off">
+    </div>
+    <div class="form-row">
       <label>Link del contenido</label>
       <input type="text" id="fi-link" placeholder="drive.google.com/... (se agrega https:// solo)" value="${escAttr(item.link||'')}">
     </div>
+    ${dataLists()}
     <div class="form-row">
       <div class="form-check">
         <input type="checkbox" id="fi-done"${item.done?' checked':''}>
@@ -1050,7 +1483,10 @@ function renderModal(){
       });
     });
     document.getElementById('mc').onclick=()=>{S.showModal=false;overlay.remove();render()};
+    bindDupCheck(overlay);
     document.getElementById('fi-save').onclick=()=>{
+      const tema=document.getElementById('fi-tema').value.trim();
+      const tags=parseTags(document.getElementById('fi-tags').value);
       const tipo=document.getElementById('fi-tipo').value;
       const area=document.getElementById('fi-area').value;
       const resps=[...m.querySelectorAll('#fi-resps .toggle-chip.active')].map(c=>c.dataset.val);
@@ -1059,8 +1495,8 @@ function renderModal(){
       const link=normalizeLink(document.getElementById('fi-link').value);
       const done=document.getElementById('fi-done').checked;
       if(!S.data[k])S.data[k]=[];
-      if(isEdit)S.data[k][S.editIdx]={tipo,area,resps,canales,desc,link,done};
-      else S.data[k].push({tipo,area,resps,canales,desc,link,done});
+      if(isEdit)S.data[k][S.editIdx]={tema,tipo,area,resps,canales,tags,desc,link,done};
+      else S.data[k].push({tema,tipo,area,resps,canales,tags,desc,link,done});
       save(S.data);S.showModal=false;overlay.remove();render();
     };
     const fd=document.getElementById('fi-del');
