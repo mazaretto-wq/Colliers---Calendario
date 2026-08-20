@@ -1027,10 +1027,19 @@ function temGroups(rows){
     g.get(key).list.push(r);
   });
   const entries=[...g.values()];
-  // 'mes' y 'ninguno' ya vienen ordenados por fecha; tema y área, por volumen
-  if(S.groupBy==='tema'||S.groupBy==='area')
+  // 'mes' y 'ninguno' ya vienen ordenados por fecha.
+  // Por tema: del más reciente al más antiguo. Por área (taxonomía fija): por volumen.
+  if(S.groupBy==='tema')entries.sort(porMasReciente);
+  else if(S.groupBy==='area')
     entries.sort((a,b)=>b.list.length-a.list.length||a.name.localeCompare(b.name,'es'));
   return entries;
+}
+
+// Ordena grupos por la fecha de calendario de su contenido más reciente
+function claveMasReciente(g){return g.list.reduce((mx,r)=>r.k>mx?r.k:mx,'')}
+function porMasReciente(a,b){
+  const ka=claveMasReciente(a),kb=claveMasReciente(b);
+  return ka<kb?1:(ka>kb?-1:a.name.localeCompare(b.name,'es'));
 }
 
 function temFilterLabels(){
@@ -1098,9 +1107,7 @@ function subGroups(list){
     if(!g.has(key))g.set(key,{name:nm,list:[]});
     g.get(key).list.push(r);
   });
-  return [...g.values()].sort((a,b)=>
-    (a.name==='Sin subtema')-(b.name==='Sin subtema')||
-    b.list.length-a.list.length||a.name.localeCompare(b.name,'es'));
+  return [...g.values()].sort(porMasReciente);
 }
 function pintarFilas(sec,list){
   if(S.groupBy!=='tema'||!list.some(r=>subtemaOf(r.it))){
