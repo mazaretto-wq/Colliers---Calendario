@@ -827,15 +827,15 @@ function renderCalendar(){
           const cb=el('button','check-btn'+(item.done?' done':''),item.done?'✓':'');
           cb.onclick=()=>{S.data[k][idx].done=!S.data[k][idx].done;save(S.data);render()};
           const info=el('div','item-info');
-          const hasTema=!!(item.tema&&item.tema.trim());
-          const title=txt('div','item-title'+(item.done?' done':''),hasTema?item.tema.trim():item.tipo);
+          // Se muestra el tema, no la descripción (la descripción queda en el modal)
+          const tema=temaOf(item);
+          const title=txt('div','item-title'+(item.done?' done':''),tema);
           const badges=el('div','item-badges');
-          if(hasTema&&item.tipo)badges.appendChild(txt('span','badge badge-resp',item.tipo));
+          if(item.tipo&&item.tipo!==tema)badges.appendChild(txt('span','badge badge-resp',item.tipo));
           badges.appendChild(el('span','badge badge-area',item.area));
           getCanales(item).forEach(c=>{const b=el('span','badge badge-canal',c);b.style=`background:${CANAL_BG[c]||'#1C54F4'}`;badges.appendChild(b);});
           getResps(item).forEach(r=>badges.appendChild(el('span','badge badge-resp',r)));
-          const desc=el('div','item-meta',item.desc||'Sin descripción');
-          info.appendChild(title);info.appendChild(badges);info.appendChild(desc);
+          info.appendChild(title);info.appendChild(badges);
           const ctLink=linkAnchor(item.link);
           if(ctLink)info.appendChild(ctLink);
           const sbi=shareBtn('Copiar este contenido',()=>copyText(itemToShareText(S.year,S.month,S.selectedDay,item),'✓ Contenido copiado'));
