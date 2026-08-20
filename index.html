@@ -153,6 +153,11 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 .tem-state.ok{background:rgba(42,182,169,0.16);color:#1d8177}
 .tem-state.no{background:rgba(237,27,52,0.12);color:var(--c-red)}
 .tem-trunc{font-size:10px;color:var(--c-mg);font-style:italic;padding:6px 0 0 96px}
+.sug-wrap{position:relative}
+.sug-box{position:absolute;left:0;right:0;top:100%;z-index:20;background:var(--c-white);border:1.5px solid var(--c-medium);border-top:none;border-radius:0 0 3px 3px;max-height:186px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,7,89,0.14)}
+.sug-item{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--c-pbg);padding:7px 9px;font-size:12px;color:var(--c-deep);cursor:pointer;font-family:'Open Sans',Verdana,sans-serif}
+.sug-item:last-child{border-bottom:none}
+.sug-item:hover,.sug-item.on{background:var(--c-pbg)}
 .dup-warn{margin-top:6px;border:1px solid rgba(237,27,52,0.4);background:rgba(237,27,52,0.07);border-radius:3px;padding:7px 9px}
 .dup-warn-title{font-size:10px;font-weight:700;color:var(--c-red);margin-bottom:4px}
 .dup-warn-item{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:11px;color:var(--c-dark);padding:2px 0;font-family:'Open Sans',Verdana,sans-serif}
@@ -305,6 +310,9 @@ body.dark .tem-tag{background:#30363d;color:#e6edf3}
 body.dark .tem-tag:hover{background:#3d4650}
 body.dark .tem-tag.on{background:var(--c-medium);color:#fff}
 body.dark .tem-state.ok{background:rgba(42,182,169,0.2);color:#39c9bb}
+body.dark .sug-box{background:#161b22;border-color:var(--c-medium);box-shadow:0 8px 20px rgba(0,0,0,0.5)}
+body.dark .sug-item{color:#e6edf3;border-bottom-color:#30363d}
+body.dark .sug-item:hover,body.dark .sug-item.on{background:#1c2128}
 body.dark .dup-warn{background:rgba(237,27,52,0.13);border-color:rgba(237,27,52,0.45)}
 body.dark .dup-warn-item{color:#e6edf3}
 body.dark .toast{background:#30363d;color:#e6edf3;border:1px solid #8b949e;box-shadow:0 6px 20px rgba(0,0,0,0.5)}
@@ -382,14 +390,17 @@ function allItems(){
   });
   return out.sort((a,b)=>a.k<b.k?1:(a.k>b.k?-1:a.idx-b.idx)); // más reciente primero
 }
-// Tema: campo propio si existe; si no, se deduce de lo que ya había cargado
-function temaOf(it){
+/* Tema "real": lo que se cargó como tema, el nombre del evento o la primera línea
+   de la descripción. NO cae al tipo de contenido: "Post" o "Story" son formatos,
+   no temas, y no tienen que ensuciar sugerencias, agrupaciones ni repetidos. */
+function temaReal(it){
   if(it.tema&&it.tema.trim())return it.tema.trim();
-  if(it.isEvent)return (it.nombre||'Evento').trim();
+  if(it.isEvent)return (it.nombre||'').trim();
   const d=(it.desc||'').trim();
-  if(d)return d.split('\n')[0].slice(0,90);
-  return it.tipo||'Contenido';
+  return d?d.split('\n')[0].slice(0,90):'';
 }
+// Para mostrar en una fila siempre hace falta algo: ahí sí se cae al tipo
+function temaOf(it){return temaReal(it)||it.tipo||'Contenido'}
 function getTags(it){
   if(Array.isArray(it.tags))return it.tags.filter(t=>t&&String(t).trim());
   if(typeof it.tags==='string')return parseTags(it.tags);
@@ -415,10 +426,11 @@ function allTags(){
   }));
   return [...seen.values()].sort((a,b)=>a.localeCompare(b,'es'));
 }
+// Sólo temas cargados a mano: ni tipos de contenido ni descripciones sueltas
 function allTemas(){
   const seen=new Map();
   allItems().forEach(r=>{
-    const t=temaOf(r.it),l=norm(t);
+    const t=(r.it.tema||'').trim(),l=norm(t);
     if(l&&!seen.has(l))seen.set(l,t);
   });
   return [...seen.values()].sort((a,b)=>a.localeCompare(b,'es'));
@@ -441,7 +453,7 @@ function similarity(a,b){
 function similarItems(text,exKey,exIdx,limit){
   if(keyWords(text).length<1)return [];
   return allItems()
-    .map(r=>Object.assign({score:similarity(text,temaOf(r.it)+' '+getTags(r.it).join(' '))},r))
+    .map(r=>Object.assign({score:similarity(text,temaReal(r.it)+' '+getTags(r.it).join(' '))},r))
     .filter(r=>r.score>=0.5&&!(r.k===exKey&&r.idx===exIdx))
     .sort((a,b)=>b.score-a.score)
     .slice(0,limit||4);
@@ -833,7 +845,7 @@ function renderCalendar(){
           const info=el('div','item-info');
           // Se muestra el tema, no la descripción (la descripción queda en el modal).
           // Si el ítem no tiene tema, se ofrece cargarlo en vez de caer al tipo.
-          const tema=(item.tema||'').trim()||((item.desc||'').trim().split('\n')[0]||'').trim();
+          const tema=temaReal(item);
           let title;
           if(tema){
             title=txt('div','item-title'+(item.done?' done':''),tema);
@@ -888,7 +900,7 @@ function temFiltered(){
 }
 
 function groupNameOf(r){
-  if(S.groupBy==='tema')return temaOf(r.it);
+  if(S.groupBy==='tema')return temaReal(r.it)||'Sin tema';
   if(S.groupBy==='mes')return MONTHS[r.m]+' '+r.y;
   if(S.groupBy==='area')return r.it.isEvent?'Eventos':(r.it.area||'Sin área');
   return '';
@@ -1305,11 +1317,68 @@ function renderAnnual(){
 }
 
 /* ── MODAL ── */
-// Sugerencias de temas y etiquetas armadas con lo ya cargado
-function dataLists(){
-  const opt=v=>`<option value="${escAttr(v)}"></option>`;
-  return `<datalist id="dl-temas">${allTemas().slice(0,400).map(opt).join('')}</datalist>`+
-         `<datalist id="dl-tags">${allTags().slice(0,400).map(opt).join('')}</datalist>`;
+/* Predictivo propio: aparece sólo si lo tipeado coincide con algo ya cargado
+   (el <datalist> nativo volcaba la lista entera al hacer foco). Ignora
+   mayúsculas y acentos, y prioriza lo que empieza igual. */
+function attachSuggest(input,getOptions,termOf,applyPick){
+  const wrap=el('div','sug-wrap');
+  input.parentNode.insertBefore(wrap,input);
+  wrap.appendChild(input);
+  const box=el('div','sug-box');
+  box.style.display='none';
+  wrap.appendChild(box);
+  let opts=[],cur=-1;
+
+  const close=()=>{box.style.display='none';box.innerHTML='';opts=[];cur=-1};
+  const mark=()=>[...box.children].forEach((c,i)=>c.classList.toggle('on',i===cur));
+  const pick=(v)=>{
+    input.value=applyPick(input.value,v);
+    close();input.focus();
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+  };
+  const open=()=>{
+    const q=norm(termOf(input.value));
+    if(!q){close();return}
+    const starts=[],has=[];
+    getOptions().forEach(o=>{
+      const n=norm(o);
+      if(n===q)return;                       // ya está escrito completo
+      if(n.startsWith(q))starts.push(o);
+      else if(n.includes(q))has.push(o);
+    });
+    opts=starts.concat(has).slice(0,6);
+    if(!opts.length){close();return}
+    box.innerHTML='';
+    opts.forEach(o=>{
+      const b=txt('button','sug-item',o);
+      b.type='button';
+      b.onmousedown=(e)=>{e.preventDefault();pick(o)};  // antes del blur
+      box.appendChild(b);
+    });
+    cur=-1;
+    box.style.display='block';
+  };
+
+  input.addEventListener('input',open);
+  input.addEventListener('focus',open);
+  input.addEventListener('blur',()=>setTimeout(close,120));
+  input.addEventListener('keydown',(e)=>{
+    if(box.style.display==='none')return;
+    if(e.key==='ArrowDown'){e.preventDefault();cur=(cur+1)%opts.length;mark()}
+    else if(e.key==='ArrowUp'){e.preventDefault();cur=(cur<=0?opts.length:cur)-1;mark()}
+    else if(e.key==='Enter'&&cur>=0){e.preventDefault();pick(opts[cur])}
+    else if(e.key==='Escape'){e.preventDefault();close()}
+  });
+}
+
+// El tema usa todo el campo; las etiquetas, sólo lo que va después de la última coma
+function bindSuggests(){
+  const tema=document.getElementById('fi-tema');
+  if(tema)attachSuggest(tema,allTemas,v=>v,(v,p)=>p);
+  const tags=document.getElementById('fi-tags');
+  if(tags)attachSuggest(tags,allTags,
+    v=>v.split(',').pop(),
+    (v,p)=>{const parts=v.split(',');parts[parts.length-1]=' '+p;return parts.join(',').replace(/^\s+/,'')+', '});
 }
 
 // Avisa si el tema que se está cargando se parece a algo que ya existe
@@ -1380,13 +1449,12 @@ function renderModal(){
       </div>
       <div class="form-row">
         <label>Etiquetas <span class="label-hint">(separadas por coma)</span></label>
-        <input type="text" id="fi-tags" placeholder="networking, clientes" value="${escAttr(getTags(item).join(', '))}" list="dl-tags" autocomplete="off">
+        <input type="text" id="fi-tags" placeholder="networking, clientes" value="${escAttr(getTags(item).join(', '))}" autocomplete="off">
       </div>
       <div class="form-row">
         <label>Link del contenido</label>
         <input type="text" id="fi-link" placeholder="drive.google.com/... (se agrega https:// solo)" value="${escAttr(item.link||'')}">
       </div>
-      ${dataLists()}
       <div class="form-row">
         <div class="form-check">
           <input type="checkbox" id="fi-done"${item.done?' checked':''}>
@@ -1406,6 +1474,7 @@ function renderModal(){
           else{chip.style.cssText='';}
         });
       });
+      bindSuggests();
       document.getElementById('mc').onclick=()=>{S.showModal=false;overlay.remove();render()};
       document.getElementById('fi-save').onclick=()=>{
         const nombre=document.getElementById('fi-nombre').value.trim()||'Evento';
@@ -1438,7 +1507,7 @@ function renderModal(){
     <div class="modal-date">${S.selectedDay} de ${MONTHS[S.month]} ${S.year}</div><br>
     <div class="form-row">
       <label>Tema / Título</label>
-      <input type="text" id="fi-tema" placeholder="Ej: Informe de oficinas Q3" value="${escAttr(item.tema||'')}" list="dl-temas" autocomplete="off">
+      <input type="text" id="fi-tema" placeholder="Ej: Informe de oficinas Q3" value="${escAttr(item.tema||'')}" autocomplete="off">
       <div class="dup-warn" id="dup-warn" style="display:none"></div>
     </div>
     <div class="form-row">
@@ -1463,13 +1532,12 @@ function renderModal(){
     </div>
     <div class="form-row">
       <label>Etiquetas <span class="label-hint">(separadas por coma)</span></label>
-      <input type="text" id="fi-tags" placeholder="oficinas, informe, q3" value="${escAttr(getTags(item).join(', '))}" list="dl-tags" autocomplete="off">
+      <input type="text" id="fi-tags" placeholder="oficinas, informe, q3" value="${escAttr(getTags(item).join(', '))}" autocomplete="off">
     </div>
     <div class="form-row">
       <label>Link del contenido</label>
       <input type="text" id="fi-link" placeholder="drive.google.com/... (se agrega https:// solo)" value="${escAttr(item.link||'')}">
     </div>
-    ${dataLists()}
     <div class="form-row">
       <div class="form-check">
         <input type="checkbox" id="fi-done"${item.done?' checked':''}>
@@ -1495,6 +1563,7 @@ function renderModal(){
       });
     });
     document.getElementById('mc').onclick=()=>{S.showModal=false;overlay.remove();render()};
+    bindSuggests();
     bindDupCheck(overlay);
     document.getElementById('fi-save').onclick=()=>{
       const tema=document.getElementById('fi-tema').value.trim();
