@@ -103,6 +103,8 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 .badge-canal{color:#fff}
 .badge-resp{background:#F0F0F8;color:var(--c-dbg);border:1px solid var(--c-pbg)}
 .item-meta{font-size:11px;color:var(--c-mg);margin-top:2px}
+.item-no-tema{background:none;border:none;padding:0;font-family:'Open Sans',Verdana,sans-serif;font-size:13px;font-weight:600;font-style:italic;color:var(--c-mg);cursor:pointer;text-align:left}
+.item-no-tema:hover{color:var(--c-medium);text-decoration:underline}
 .del-btn{background:none;border:none;cursor:pointer;color:var(--c-grey);font-size:14px;padding:2px 4px;margin-top:1px;line-height:1}
 .del-btn:hover{color:var(--c-red)}
 .edit-btn{background:none;border:none;cursor:pointer;color:var(--c-grey);font-size:13px;padding:2px 4px;margin-top:1px;line-height:1}
@@ -254,6 +256,8 @@ body.dark .divider{border-top-color:#30363d}
 body.dark .content-item{border-bottom-color:#30363d}
 body.dark .check-btn{border-color:#30363d}
 body.dark .item-title{color:#e6edf3}
+body.dark .item-no-tema{color:#8b949e}
+body.dark .item-no-tema:hover{color:#58a6ff}
 body.dark .badge-area{background:#30363d;color:#e6edf3}
 body.dark .badge-resp{background:#30363d;color:#e6edf3;border-color:#30363d}
 body.dark .modal-overlay{background:rgba(0,0,0,0.7)}
@@ -773,7 +777,7 @@ function renderCalendar(){
     cell.appendChild(tags);
     const ab=el('button','add-btn','+');
     ab.title='Agregar contenido';
-    ab.onclick=(e)=>{e.stopPropagation();S.selectedDay=d;S.editIdx=null;S.showModal=true;render()};
+    ab.onclick=(e)=>{e.stopPropagation();S.selectedDay=d;S.editIdx=null;S.eventMode=false;S.showModal=true;render()};
     cell.appendChild(ab);
     cell.onclick=()=>{S.selectedDay=(S.selectedDay===d?null:d);render()};
     grid.appendChild(cell);
@@ -827,9 +831,17 @@ function renderCalendar(){
           const cb=el('button','check-btn'+(item.done?' done':''),item.done?'✓':'');
           cb.onclick=()=>{S.data[k][idx].done=!S.data[k][idx].done;save(S.data);render()};
           const info=el('div','item-info');
-          // Se muestra el tema, no la descripción (la descripción queda en el modal)
-          const tema=temaOf(item);
-          const title=txt('div','item-title'+(item.done?' done':''),tema);
+          // Se muestra el tema, no la descripción (la descripción queda en el modal).
+          // Si el ítem no tiene tema, se ofrece cargarlo en vez de caer al tipo.
+          const tema=(item.tema||'').trim()||((item.desc||'').trim().split('\n')[0]||'').trim();
+          let title;
+          if(tema){
+            title=txt('div','item-title'+(item.done?' done':''),tema);
+          } else {
+            title=txt('button','item-no-tema','✎ Agregar tema');
+            title.type='button';title.title='Este contenido todavía no tiene tema cargado';
+            title.onclick=()=>{S.editIdx=idx;S.eventMode=false;S.showModal=true;render()};
+          }
           const badges=el('div','item-badges');
           if(item.tipo&&item.tipo!==tema)badges.appendChild(txt('span','badge badge-resp',item.tipo));
           badges.appendChild(el('span','badge badge-area',item.area));
