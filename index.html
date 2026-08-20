@@ -139,6 +139,11 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 .tem-g-title{display:flex;align-items:center;gap:8px;padding-bottom:6px;border-bottom:2px solid var(--c-pbg);margin-bottom:2px}
 .tem-g-name{font-size:12px;font-weight:700;color:var(--c-deep);letter-spacing:0.2px}
 .tem-g-count{font-size:10px;font-weight:700;color:var(--c-medium);background:var(--c-pbg);border-radius:10px;padding:2px 8px;flex-shrink:0}
+.tem-sub-title{display:flex;align-items:center;gap:7px;padding:8px 0 3px 12px;border-bottom:1px dashed var(--c-pbg)}
+.tem-sub-name{font-size:11px;font-weight:700;color:var(--c-dg)}
+.tem-sub-count{font-size:9px;font-weight:700;color:var(--c-mg);background:var(--c-bg);border:1px solid var(--c-pbg);border-radius:9px;padding:1px 7px;flex-shrink:0}
+.tem-sub-title+.tem-row{padding-left:12px}
+.item-sub{font-size:11px;font-weight:600;color:var(--c-mg);margin-top:1px}
 .tem-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--c-pbg)}
 .tem-row:last-child{border-bottom:none}
 .tem-date{font-size:10px;font-weight:700;color:var(--c-medium);background:none;border:none;cursor:pointer;padding:3px 0;width:86px;flex-shrink:0;text-align:left;font-family:'Open Sans',Verdana,sans-serif;letter-spacing:0.2px}
@@ -159,7 +164,9 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 .sug-item:last-child{border-bottom:none}
 .sug-item:hover,.sug-item.on{background:var(--c-pbg)}
 .dup-warn{margin-top:6px;border:1px solid rgba(237,27,52,0.4);background:rgba(237,27,52,0.07);border-radius:3px;padding:7px 9px}
+.dup-warn.info{border-color:rgba(28,84,244,0.35);background:rgba(28,84,244,0.06)}
 .dup-warn-title{font-size:10px;font-weight:700;color:var(--c-red);margin-bottom:4px}
+.dup-warn.info .dup-warn-title{color:var(--c-medium)}
 .dup-warn-item{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;font-size:11px;color:var(--c-dark);padding:2px 0;font-family:'Open Sans',Verdana,sans-serif}
 .dup-warn-item:hover{text-decoration:underline;color:var(--c-medium)}
 .label-hint{font-weight:400;text-transform:none;letter-spacing:0;color:var(--c-mg)}
@@ -313,7 +320,13 @@ body.dark .tem-state.ok{background:rgba(42,182,169,0.2);color:#39c9bb}
 body.dark .sug-box{background:#161b22;border-color:var(--c-medium);box-shadow:0 8px 20px rgba(0,0,0,0.5)}
 body.dark .sug-item{color:#e6edf3;border-bottom-color:#30363d}
 body.dark .sug-item:hover,body.dark .sug-item.on{background:#1c2128}
+body.dark .tem-sub-title{border-bottom-color:#30363d}
+body.dark .tem-sub-name{color:#adbac7}
+body.dark .tem-sub-count{background:#0d1117;border-color:#30363d;color:#8b949e}
+body.dark .item-sub{color:#8b949e}
 body.dark .dup-warn{background:rgba(237,27,52,0.13);border-color:rgba(237,27,52,0.45)}
+body.dark .dup-warn.info{background:rgba(28,84,244,0.14);border-color:rgba(88,166,255,0.4)}
+body.dark .dup-warn.info .dup-warn-title{color:#58a6ff}
 body.dark .dup-warn-item{color:#e6edf3}
 body.dark .toast{background:#30363d;color:#e6edf3;border:1px solid #8b949e;box-shadow:0 6px 20px rgba(0,0,0,0.5)}
 </style>
@@ -401,6 +414,7 @@ function temaReal(it){
 }
 // Para mostrar en una fila siempre hace falta algo: ahí sí se cae al tipo
 function temaOf(it){return temaReal(it)||it.tipo||'Contenido'}
+function subtemaOf(it){return (it.subtema||'').trim()}
 function getTags(it){
   if(Array.isArray(it.tags))return it.tags.filter(t=>t&&String(t).trim());
   if(typeof it.tags==='string')return parseTags(it.tags);
@@ -418,6 +432,19 @@ function parseTags(str){
   return out.slice(0,12);
 }
 // Etiquetas sugeridas: se arman solas con lo ya cargado, no hay lista fija que mantener
+/* Subtemas ya usados. Si se pasa un tema, primero los de ese tema:
+   al cargar el subtema conviene ver qué se hizo dentro del mismo tema. */
+function allSubtemas(tema){
+  const t=norm(tema||''),propios=new Map(),otros=new Map();
+  allItems().forEach(r=>{
+    const s=subtemaOf(r.it),l=norm(s);
+    if(!l)return;
+    const dest=(t&&norm(temaReal(r.it))===t)?propios:otros;
+    if(!dest.has(l))dest.set(l,s);
+  });
+  const orden=(m)=>[...m.values()].sort((a,b)=>a.localeCompare(b,'es'));
+  return orden(propios).concat(orden(otros).filter(s=>!propios.has(norm(s))));
+}
 function allTags(){
   const seen=new Map();
   allItems().forEach(r=>getTags(r.it).forEach(t=>{
@@ -460,7 +487,7 @@ function similarItems(text,exKey,exIdx,limit){
 }
 function haystack(r){
   const it=r.it;
-  return norm([temaOf(it),it.desc,getTags(it).join(' '),it.area,it.tipo,
+  return norm([temaOf(it),subtemaOf(it),it.desc,getTags(it).join(' '),it.area,it.tipo,
     getCanales(it).join(' '),getResps(it).join(' '),it.isEvent?'evento':''].join(' '));
 }
 
@@ -527,6 +554,7 @@ function itemToText(it){
     const tema=(it.tema||'').trim();
     if(tema){
       L.push(`• ${tema}`);
+      if(subtemaOf(it))L.push(`   ↳ ${subtemaOf(it)}`);
       L.push(`   ${it.tipo||'Contenido'} — ${it.area||'Sin área'}`);
     } else {
       L.push(`• ${it.tipo||'Contenido'} — ${it.area||'Sin área'}`);
@@ -859,7 +887,9 @@ function renderCalendar(){
           badges.appendChild(el('span','badge badge-area',item.area));
           getCanales(item).forEach(c=>{const b=el('span','badge badge-canal',c);b.style=`background:${CANAL_BG[c]||'#1C54F4'}`;badges.appendChild(b);});
           getResps(item).forEach(r=>badges.appendChild(el('span','badge badge-resp',r)));
-          info.appendChild(title);info.appendChild(badges);
+          info.appendChild(title);
+          if(subtemaOf(item))info.appendChild(txt('div','item-sub','↳ '+subtemaOf(item)));
+          info.appendChild(badges);
           const ctLink=linkAnchor(item.link);
           if(ctLink)info.appendChild(ctLink);
           const sbi=shareBtn('Copiar este contenido',()=>copyText(itemToShareText(S.year,S.month,S.selectedDay,item),'✓ Contenido copiado'));
@@ -939,7 +969,12 @@ function temRow(r){
   dt.type='button';dt.title='Ir a ese día en el calendario';
   dt.onclick=()=>{S.view='calendar';S.year=r.y;S.month=r.m;S.selectedDay=r.d;S.editIdx=null;render()};
   const body=el('div','tem-body');
-  body.appendChild(txt('div','tem-tema',(it.isEvent?'📅 ':'')+temaOf(it)));
+  // Agrupado por tema, el tema y el subtema ya están en los encabezados:
+  // la fila muestra sólo lo que distingue a un contenido de sus hermanos.
+  if(S.groupBy!=='tema'){
+    body.appendChild(txt('div','tem-tema',(it.isEvent?'📅 ':'')+temaOf(it)));
+    if(subtemaOf(it))body.appendChild(txt('div','item-sub','↳ '+subtemaOf(it)));
+  }
   const badges=el('div','item-badges');
   if(!it.isEvent){
     if(it.area)badges.appendChild(txt('span','badge badge-area',it.area));
@@ -969,6 +1004,33 @@ function temRow(r){
   row.appendChild(dt);row.appendChild(body);
   row.appendChild(txt('span','tem-state '+(it.done?'ok':'no'),it.done?(it.isEvent?'Realizado':'Subido'):'Pendiente'));
   return row;
+}
+
+// Agrupando por tema, las filas se abren en subtemas (si alguna lo tiene)
+function subGroups(list){
+  const g=new Map();
+  list.forEach(r=>{
+    const nm=subtemaOf(r.it)||'Sin subtema';
+    const key=norm(nm)||nm;
+    if(!g.has(key))g.set(key,{name:nm,list:[]});
+    g.get(key).list.push(r);
+  });
+  return [...g.values()].sort((a,b)=>
+    (a.name==='Sin subtema')-(b.name==='Sin subtema')||
+    b.list.length-a.list.length||a.name.localeCompare(b.name,'es'));
+}
+function pintarFilas(sec,list){
+  if(S.groupBy!=='tema'||!list.some(r=>subtemaOf(r.it))){
+    list.forEach(r=>sec.appendChild(temRow(r)));
+    return;
+  }
+  subGroups(list).forEach(sg=>{
+    const st=el('div','tem-sub-title');
+    st.appendChild(txt('span','tem-sub-name','↳ '+sg.name));
+    st.appendChild(txt('span','tem-sub-count',sg.list.length));
+    sec.appendChild(st);
+    sg.list.forEach(r=>sec.appendChild(temRow(r)));
+  });
 }
 
 function paintTemario(){
@@ -1006,7 +1068,7 @@ function paintTemario(){
       sec.appendChild(t);
     }
     const take=g.list.slice(0,budget);
-    take.forEach(r=>sec.appendChild(temRow(r)));
+    pintarFilas(sec,take);
     if(take.length<g.list.length)
       sec.appendChild(txt('div','tem-trunc',`+${g.list.length-take.length} más en este grupo`));
     budget-=take.length;
@@ -1077,18 +1139,26 @@ function temarioToText(rows){
   const pend=rows.length-done;
   L.push(`${rows.length} ${rows.length===1?'ítem':'ítems'} · ${done} ${done===1?'subido':'subidos'} · ${pend} ${pend===1?'pendiente':'pendientes'}`);
   L.push('──────────────────────────');
+  const fila=(r,sangria)=>{
+    const it=r.it;
+    const bits=[`${r.k}`];
+    if(S.groupBy!=='tema')bits.push([temaOf(it),subtemaOf(it)].filter(Boolean).join(' › '));
+    bits.push(it.isEvent?'Evento':`${it.tipo||'Contenido'} — ${it.area||'Sin área'}`);
+    const c=getCanales(it);if(c.length)bits.push(c.join('/'));
+    bits.push(it.done?(it.isEvent?'Realizado':'Subido'):'Pendiente');
+    const lk=hrefOf(it.link);if(lk)bits.push(lk);
+    L.push(sangria+bits.join(' · '));
+  };
   temGroups(rows).forEach(g=>{
     if(S.groupBy!=='ninguno')L.push(`▸ ${g.name||'Sin dato'} (${g.list.length})`);
-    g.list.forEach(r=>{
-      const it=r.it;
-      const bits=[`${r.k}`];
-      if(S.groupBy!=='tema')bits.push(temaOf(it));
-      bits.push(it.isEvent?'Evento':`${it.tipo||'Contenido'} — ${it.area||'Sin área'}`);
-      const c=getCanales(it);if(c.length)bits.push(c.join('/'));
-      bits.push(it.done?(it.isEvent?'Realizado':'Subido'):'Pendiente');
-      const lk=hrefOf(it.link);if(lk)bits.push(lk);
-      L.push('   '+bits.join(' · '));
-    });
+    if(S.groupBy==='tema'&&g.list.some(r=>subtemaOf(r.it))){
+      subGroups(g.list).forEach(sg=>{
+        L.push(`   ↳ ${sg.name} (${sg.list.length})`);
+        sg.list.forEach(r=>fila(r,'      '));
+      });
+    } else {
+      g.list.forEach(r=>fila(r,'   '));
+    }
     L.push('');
   });
   L.push(`🔗 Temario completo: ${location.origin+location.pathname+location.search}#temario`);
@@ -1375,40 +1445,74 @@ function attachSuggest(input,getOptions,termOf,applyPick){
 function bindSuggests(){
   const tema=document.getElementById('fi-tema');
   if(tema)attachSuggest(tema,allTemas,v=>v,(v,p)=>p);
+  const sub=document.getElementById('fi-subtema');
+  if(sub)attachSuggest(sub,()=>allSubtemas(tema?tema.value:''),v=>v,(v,p)=>p);
   const tags=document.getElementById('fi-tags');
   if(tags)attachSuggest(tags,allTags,
     v=>v.split(',').pop(),
     (v,p)=>{const parts=v.split(',');parts[parts.length-1]=' '+p;return parts.join(',').replace(/^\s+/,'')+', '});
 }
 
-// Avisa si el tema que se está cargando se parece a algo que ya existe
+/* Aviso contextual bajo el subtema. Con jerarquía tema/subtema hay tres casos:
+   - mismo tema y mismo subtema  → repetido de verdad (rojo)
+   - mismo tema, otro subtema    → informativo: qué se cubrió ya en ese tema
+   - tema parecido pero distinto → aviso de parecidos (rojo) */
 function bindDupCheck(overlay){
-  const input=document.getElementById('fi-tema');
+  const temaIn=document.getElementById('fi-tema');
+  const subIn=document.getElementById('fi-subtema');
   const box=document.getElementById('dup-warn');
-  if(!input||!box)return;
+  if(!temaIn||!box)return;
   const k=dayKey(S.year,S.month,S.selectedDay);
   const exIdx=S.editIdx===null?-1:S.editIdx;
-  const check=()=>{
-    const sims=similarItems(input.value,k,exIdx);
-    box.innerHTML='';
-    if(!sims.length){box.style.display='none';return}
+
+  const irAlDia=(r)=>()=>{
+    S.showModal=false;overlay.remove();S.editIdx=null;
+    S.view='calendar';S.year=r.y;S.month=r.m;S.selectedDay=r.d;
+    render();
+  };
+  const pintar=(clase,titulo,lista,etiqueta)=>{
+    box.className='dup-warn'+(clase?' '+clase:'');
     box.style.display='block';
-    box.appendChild(txt('div','dup-warn-title',
-      `⚠ Ya hay ${sims.length} ${sims.length===1?'contenido parecido':'contenidos parecidos'}:`));
-    sims.forEach(r=>{
+    box.innerHTML='';
+    box.appendChild(txt('div','dup-warn-title',titulo));
+    lista.slice(0,5).forEach(r=>{
       const b=txt('button','dup-warn-item',
-        `${r.k} · ${temaOf(r.it)} · ${r.it.done?'subido':'pendiente'}`);
+        `${r.k} · ${etiqueta(r)} · ${r.it.done?'subido':'pendiente'}`);
       b.type='button';b.title='Ver ese día en el calendario';
-      b.onclick=()=>{
-        S.showModal=false;overlay.remove();S.editIdx=null;
-        S.view='calendar';S.year=r.y;S.month=r.m;S.selectedDay=r.d;
-        render();
-      };
+      b.onclick=irAlDia(r);
       box.appendChild(b);
     });
   };
+
+  const check=()=>{
+    const tema=temaIn.value.trim(),sub=subIn?subIn.value.trim():'';
+    box.style.display='none';box.innerHTML='';
+    if(!norm(tema))return;
+    const otros=allItems().filter(r=>!(r.k===k&&r.idx===exIdx));
+    const mismoTema=otros.filter(r=>norm(temaReal(r.it))===norm(tema));
+
+    if(mismoTema.length){
+      const igual=norm(sub)?mismoTema.filter(r=>norm(subtemaOf(r.it))===norm(sub)):[];
+      if(igual.length){
+        pintar('',`⚠ Ya existe este tema con el mismo subtema (${igual.length}):`,igual,
+          r=>subtemaOf(r.it)||'sin subtema');
+        return;
+      }
+      pintar('info',
+        `Ya hay ${mismoTema.length} ${mismoTema.length===1?'contenido':'contenidos'} en este tema:`,
+        mismoTema,r=>subtemaOf(r.it)||'sin subtema');
+      return;
+    }
+    const sims=similarItems(tema+' '+sub,k,exIdx);
+    if(!sims.length)return;
+    pintar('',`⚠ Ya hay ${sims.length} ${sims.length===1?'tema parecido':'temas parecidos'}:`,
+      sims,r=>[temaOf(r.it),subtemaOf(r.it)].filter(Boolean).join(' › '));
+  };
+
   let timer=null;
-  input.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(check,180)});
+  const debounced=()=>{clearTimeout(timer);timer=setTimeout(check,180)};
+  temaIn.addEventListener('input',debounced);
+  if(subIn)subIn.addEventListener('input',debounced);
   check();
 }
 
@@ -1494,7 +1598,7 @@ function renderModal(){
     },30);
     return overlay;
   }
-  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tema:'',tipo:TIPOS[0],area:AREAS[0],resps:[],canales:[],tags:[],desc:'',link:'',done:false};
+  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tema:'',subtema:'',tipo:TIPOS[0],area:AREAS[0],resps:[],canales:[],tags:[],desc:'',link:'',done:false};
   const selCanales=getCanales(item);
   const selResps=getResps(item);
   const overlay=el('div','modal-overlay');
@@ -1506,8 +1610,12 @@ function renderModal(){
     </div>
     <div class="modal-date">${S.selectedDay} de ${MONTHS[S.month]} ${S.year}</div><br>
     <div class="form-row">
-      <label>Tema / Título</label>
-      <input type="text" id="fi-tema" placeholder="Ej: Informe de oficinas Q3" value="${escAttr(item.tema||'')}" autocomplete="off">
+      <label>Tema</label>
+      <input type="text" id="fi-tema" placeholder="Ej: Vacancia de oficinas" value="${escAttr(item.tema||'')}" autocomplete="off">
+    </div>
+    <div class="form-row">
+      <label>Subtema <span class="label-hint">(opcional)</span></label>
+      <input type="text" id="fi-subtema" placeholder="Ej: Qué es la vacancia" value="${escAttr(item.subtema||'')}" autocomplete="off">
       <div class="dup-warn" id="dup-warn" style="display:none"></div>
     </div>
     <div class="form-row">
@@ -1567,6 +1675,7 @@ function renderModal(){
     bindDupCheck(overlay);
     document.getElementById('fi-save').onclick=()=>{
       const tema=document.getElementById('fi-tema').value.trim();
+      const subtema=document.getElementById('fi-subtema').value.trim();
       const tags=parseTags(document.getElementById('fi-tags').value);
       const tipo=document.getElementById('fi-tipo').value;
       const area=document.getElementById('fi-area').value;
@@ -1576,8 +1685,8 @@ function renderModal(){
       const link=normalizeLink(document.getElementById('fi-link').value);
       const done=document.getElementById('fi-done').checked;
       if(!S.data[k])S.data[k]=[];
-      if(isEdit)S.data[k][S.editIdx]={tema,tipo,area,resps,canales,tags,desc,link,done};
-      else S.data[k].push({tema,tipo,area,resps,canales,tags,desc,link,done});
+      if(isEdit)S.data[k][S.editIdx]={tema,subtema,tipo,area,resps,canales,tags,desc,link,done};
+      else S.data[k].push({tema,subtema,tipo,area,resps,canales,tags,desc,link,done});
       save(S.data);S.showModal=false;overlay.remove();render();
     };
     const fd=document.getElementById('fi-del');
