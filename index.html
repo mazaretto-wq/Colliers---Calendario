@@ -42,6 +42,11 @@ body{background:var(--c-bg);min-height:100vh}
 .cal-day:hover{border-color:var(--c-medium);background:var(--c-pbg)}
 .cal-day.empty{background:none;border:none;cursor:default}
 .cal-day.weekend{background:#F8FAFF}
+/* Feriado: va antes que today/selected/overdue para que esos ganen el borde */
+.cal-day.feriado{background:#E9EAEF;border-color:#D6D8E2}
+.cal-day.feriado:hover{background:#DFE1E9;border-color:var(--c-mg)}
+.holiday-name{font-size:8px;font-weight:700;color:var(--c-dg);line-height:1.15;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feriado-badge{font-size:10px;font-weight:700;color:var(--c-dg);background:#E9EAEF;border-radius:2px;padding:2px 7px;margin-left:8px;text-transform:none;letter-spacing:0;vertical-align:middle}
 .cal-day.today{border:2px solid var(--c-medium)}
 .cal-day.selected{border:2px solid var(--c-dark);background:var(--c-pbg)}
 /* Día ya pasado con contenido sin confirmar */
@@ -74,6 +79,7 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 .modal{background:var(--c-white);border-radius:4px;border-top:4px solid var(--c-medium);padding:1.5rem;width:380px;max-width:95vw;max-height:90vh;overflow-y:auto}
 .modal-title{font-size:13px;font-weight:700;color:var(--c-deep);margin-bottom:1.25rem;text-transform:uppercase;letter-spacing:0.4px;display:flex;justify-content:space-between;align-items:center}
 .modal-date{font-size:12px;color:var(--c-mg);font-weight:400;text-transform:none;letter-spacing:0}
+.modal-feriado{color:var(--c-red);font-weight:700}
 .modal-close{background:none;border:none;cursor:pointer;font-size:18px;color:var(--c-mg);line-height:1}
 .modal-close:hover{color:var(--c-red)}
 .form-row{margin-bottom:12px}
@@ -256,6 +262,10 @@ body.dark .cal-day{background:#1c2128;border-color:#30363d}
 body.dark .cal-day:hover{background:#161b22;border-color:var(--c-medium)}
 body.dark .cal-day.empty{background:transparent;border-color:transparent}
 body.dark .cal-day.weekend{background:#161b22}
+body.dark .cal-day.feriado{background:#23262c;border-color:#3a3f47}
+body.dark .cal-day.feriado:hover{background:#2b2f36;border-color:#8b949e}
+body.dark .holiday-name{color:#8b949e}
+body.dark .feriado-badge{background:#30363d;color:#adbac7}
 body.dark .cal-day.today{border-color:var(--c-medium)}
 body.dark .cal-day.selected{background:#161b22;border-color:#58a6ff}
 body.dark .cal-day.overdue{background:rgba(237,27,52,0.12);border-color:var(--c-red)}
@@ -576,7 +586,10 @@ function itemToText(it){
 function dayToText(y,m,d){
   const items=S.data[dayKey(y,m,d)]||[];
   const done=items.filter(it=>it.done).length,pend=items.length-done;
-  const L=['📅 Colliers — Calendario de Contenidos',fmtDateLong(y,m,d),''];
+  const fer=feriadoDe(y,m,d);
+  const L=['📅 Colliers — Calendario de Contenidos',fmtDateLong(y,m,d)];
+  if(fer)L.push('🇦🇷 Feriado nacional: '+fer);
+  L.push('');
   if(!items.length){
     L.push('Sin contenido planificado para este día.');
   } else {
@@ -658,11 +671,70 @@ function isPastDay(y,m,d,sot){
   return new Date(y,m,d).getTime()<(sot===undefined?startOfToday():sot);
 }
 
+/* ── FERIADOS ARGENTINOS (Ley 27.399) ──
+   Se calculan solos: los de fecha fija, los atados a Pascua (Carnaval y
+   Viernes Santo) y los trasladables. Los "puentes turísticos" se fijan por
+   decreto cada año y NO se pueden calcular: se cargan a mano acá abajo. */
+const FERIADOS_EXTRA={
+  // Formato: 'AAAA-MM-DD':'Motivo'  — ver argentina.gob.ar/interior/feriados
+  // '2026-05-08':'Feriado con fines turísticos',
+};
+
+// Domingo de Pascua (Meeus/Jones/Butcher)
+function pascua(y){
+  const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,
+        f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),
+        h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,
+        l=(32+2*e+2*i-h-k)%7,mm=Math.floor((a+11*h+22*l)/451),
+        mes=Math.floor((h+l-7*mm+114)/31),dia=((h+l-7*mm+114)%31)+1;
+  return new Date(y,mes-1,dia);
+}
+function sumarDias(dt,n){const d=new Date(dt);d.setDate(d.getDate()+n);return d}
+
+// Trasladables: martes y miércoles al lunes anterior; jueves y viernes al lunes siguiente
+function trasladar(y,m,d){
+  const dt=new Date(y,m,d),wd=dt.getDay();
+  if(wd===2||wd===3)return sumarDias(dt,1-wd);
+  if(wd===4||wd===5)return sumarDias(dt,8-wd);
+  return dt;
+}
+
+const FERIADOS_CACHE={};
+function feriadosDe(y){
+  if(FERIADOS_CACHE[y])return FERIADOS_CACHE[y];
+  const f={};
+  const set=(dt,nombre)=>{f[dayKey(dt.getFullYear(),dt.getMonth(),dt.getDate())]=nombre};
+  [[0,1,'Año Nuevo'],
+   [2,24,'Día Nacional de la Memoria'],
+   [3,2,'Día del Veterano y de los Caídos en Malvinas'],
+   [4,1,'Día del Trabajador'],
+   [4,25,'Día de la Revolución de Mayo'],
+   [5,20,'Paso a la Inmortalidad del Gral. Belgrano'],
+   [6,9,'Día de la Independencia'],
+   [11,8,'Inmaculada Concepción de María'],
+   [11,25,'Navidad']].forEach(([m,d,n])=>set(new Date(y,m,d),n));
+  const p=pascua(y);
+  set(sumarDias(p,-48),'Carnaval');
+  set(sumarDias(p,-47),'Carnaval');
+  set(sumarDias(p,-2),'Viernes Santo');
+  set(trasladar(y,5,17),'Paso a la Inmortalidad del Gral. Güemes');
+  set(trasladar(y,7,17),'Paso a la Inmortalidad del Gral. San Martín');
+  set(trasladar(y,9,12),'Día del Respeto a la Diversidad Cultural');
+  set(trasladar(y,10,20),'Día de la Soberanía Nacional');
+  Object.keys(FERIADOS_EXTRA).forEach(k=>{if(k.indexOf(y+'-')===0)f[k]=FERIADOS_EXTRA[k]});
+  FERIADOS_CACHE[y]=f;
+  return f;
+}
+function feriadoDe(y,m,d){return feriadosDe(y)[dayKey(y,m,d)]||''}
+
 function workdaysLeft(y,m){
   const now=new Date(),last=new Date(y,m+1,0).getDate();
   const start=(y===now.getFullYear()&&m===now.getMonth())?now.getDate():1;
   let c=0;
-  for(let d=start;d<=last;d++){const wd=new Date(y,m,d).getDay();if(wd&&wd<6)c++;}
+  for(let d=start;d<=last;d++){
+    const wd=new Date(y,m,d).getDay();
+    if(wd&&wd<6&&!feriadoDe(y,m,d))c++;   // los feriados no son días hábiles
+  }
   return c;
 }
 
@@ -777,6 +849,9 @@ function renderCalendar(){
     li.style='color:#ED1B34';
     leg.appendChild(li);
   }
+  const feriadosMes=Object.keys(feriadosDe(S.year)).filter(k=>k.indexOf(`${S.year}-${String(S.month+1).padStart(2,'0')}-`)===0).length;
+  if(feriadosMes)
+    leg.appendChild(el('div','legend-item',`<div class="legend-dot" style="background:#C9CBD6"></div><span>Feriado — ${feriadosMes} este mes</span>`));
   wrap.appendChild(leg);
 
   const grid=el('div','calendar-grid');
@@ -791,15 +866,21 @@ function renderCalendar(){
     const items=S.data[k]||[];
     const pend=items.filter(it=>!it.done).length;
     const overdue=pend>0&&isPastDay(S.year,S.month,d,sot);
+    const feriado=feriadoDe(S.year,S.month,d);
     let cls='cal-day';
     if(!wd||wd===6)cls+=' weekend';
+    if(feriado)cls+=' feriado';
     if(today.getFullYear()===S.year&&today.getMonth()===S.month&&today.getDate()===d)cls+=' today';
     if(overdue)cls+=' overdue';
     if(S.selectedDay===d)cls+=' selected';
     const cell=el('div',cls);
-    if(overdue)cell.title=`${pend} ${pend===1?'ítem pendiente':'ítems pendientes'} sin confirmar de un día que ya pasó`;
+    const tips=[];
+    if(feriado)tips.push('Feriado nacional: '+feriado);
+    if(overdue)tips.push(`${pend} ${pend===1?'ítem pendiente':'ítems pendientes'} sin confirmar de un día que ya pasó`);
+    if(tips.length)cell.title=tips.join(' — ');
     cell.appendChild(el('div','day-num',d));
     if(overdue)cell.appendChild(el('div','overdue-flag','⚠ '+pend));
+    if(feriado)cell.appendChild(txt('div','holiday-name',feriado));
     const tags=el('div','day-tags');
     items.slice(0,3).forEach(it=>{
       if(it.isEvent){
@@ -831,6 +912,8 @@ function renderCalendar(){
     const dh=el('div','detail-header');
     const dt=el('p','section-title',`${S.selectedDay} de ${MONTHS[S.month]}`);
     dt.style='margin:0;border:none;padding:0';
+    const ferSel=feriadoDe(S.year,S.month,S.selectedDay);
+    if(ferSel)dt.appendChild(txt('span','feriado-badge','🇦🇷 Feriado: '+ferSel));
     const btnGrp=el('div','');btnGrp.style='display:flex;gap:6px';
     const ab2=el('button','btn-add-detail','+ Contenido');
     ab2.onclick=()=>{S.editIdx=null;S.eventMode=false;S.showModal=true;render()};
@@ -1387,6 +1470,11 @@ function renderAnnual(){
 }
 
 /* ── MODAL ── */
+// Aviso al pie de la fecha si el día elegido es feriado
+function avisoFeriado(){
+  const f=feriadoDe(S.year,S.month,S.selectedDay);
+  return f?` · <span class="modal-feriado">🇦🇷 Feriado: ${escAttr(f)}</span>`:'';
+}
 /* Predictivo propio: aparece sólo si lo tipeado coincide con algo ya cargado
    (el <datalist> nativo volcaba la lista entera al hacer foco). Ignora
    mayúsculas y acentos, y prioriza lo que empieza igual. */
@@ -1538,7 +1626,7 @@ function renderModal(){
         <span>${isEdit?'Editar':'Agregar'} evento</span>
         <button class="modal-close" id="mc">✕</button>
       </div>
-      <div class="modal-date">${S.selectedDay} de ${MONTHS[S.month]} ${S.year}</div><br>
+      <div class="modal-date">${S.selectedDay} de ${MONTHS[S.month]} ${S.year}${avisoFeriado()}</div><br>
       <div class="form-row">
         <label>Nombre del evento</label>
         <input type="text" id="fi-nombre" placeholder="Ej: Evento de networking..." value="${item.nombre||''}">
@@ -1608,7 +1696,7 @@ function renderModal(){
       <span>${isEdit?'Editar':'Agregar'} contenido</span>
       <button class="modal-close" id="mc">✕</button>
     </div>
-    <div class="modal-date">${S.selectedDay} de ${MONTHS[S.month]} ${S.year}</div><br>
+    <div class="modal-date">${S.selectedDay} de ${MONTHS[S.month]} ${S.year}${avisoFeriado()}</div><br>
     <div class="form-row">
       <label>Tema</label>
       <input type="text" id="fi-tema" placeholder="Ej: Vacancia de oficinas" value="${escAttr(item.tema||'')}" autocomplete="off">
