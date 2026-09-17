@@ -242,13 +242,22 @@ body,body *{transition:background-color 0.3s,color 0.3s,border-color 0.3s,box-sh
 .area-bar-fill,.resp-mini-fill,.tipo-card-fill,.month-prog-fill,.prog-fill{transition:width 0.4s ease!important}
 
 /* ── TOGGLE BUTTON ── */
-.theme-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);color:white;border-radius:20px;padding:4px 12px;cursor:pointer;font-size:15px;margin-left:auto;line-height:1.5;letter-spacing:0}
+.theme-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);color:white;border-radius:20px;padding:4px 12px;cursor:pointer;font-size:15px;margin-left:0;line-height:1.5;letter-spacing:0}
 .theme-btn:hover{background:rgba(255,255,255,0.24)}
+
+/* ── SELECTOR DE PAÍS ── */
+.pais-switch{display:flex;gap:3px;margin-left:auto;background:rgba(255,255,255,0.10);border-radius:20px;padding:3px}
+.pais-btn{background:none;border:none;color:rgba(255,255,255,0.7);border-radius:16px;padding:5px 13px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Open Sans',Verdana,sans-serif;letter-spacing:0.3px;white-space:nowrap;line-height:1.4}
+.pais-btn:hover{color:#fff;background:rgba(255,255,255,0.10)}
+.pais-btn.active{background:var(--c-white);color:var(--c-dark)}
+@media(max-width:600px){.pais-nombre{display:none}.brand-title{font-size:13px}}
 
 /* ── MODO NOCHE ── */
 body.dark{background:#0d1117;--c-deep:#e6edf3;--c-pbg:#30363d;--c-dg:#8b949e;--c-mg:#8b949e;--c-lg:#30363d;--c-bg:#0d1117;--c-grey:#30363d;--c-dbg:#8b949e}
 body.dark .app{background:#0d1117;box-shadow:none}
 body.dark .brand-header{background:#161b22;border-bottom:1px solid #30363d}
+body.dark .pais-switch{background:rgba(255,255,255,0.06)}
+body.dark .pais-btn.active{background:#30363d;color:#e6edf3}
 body.dark .main{background:#0d1117}
 body.dark .tabs{border-bottom-color:#30363d}
 body.dark .tab{color:#8b949e}
@@ -347,6 +356,10 @@ body.dark .toast{background:#30363d;color:#e6edf3;border:1px solid #8b949e;box-s
   <div class="brand-header">
     <div class="brand-accent"></div>
     <span class="brand-title">Colliers — Calendario de Contenidos</span>
+    <div class="pais-switch">
+      <button class="pais-btn" data-pais="ar" onclick="setPais('ar')" title="Calendario de Argentina">🇦🇷 <span class="pais-nombre">Argentina</span></button>
+      <button class="pais-btn" data-pais="uy" onclick="setPais('uy')" title="Calendario de Uruguay">🇺🇾 <span class="pais-nombre">Uruguay</span></button>
+    </div>
     <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Cambiar modo día/noche">🌙</button>
   </div>
   <div class="main">
@@ -501,6 +514,23 @@ function haystack(r){
     getCanales(it).join(' '),getResps(it).join(' '),it.isEvent?'evento':''].join(' '));
 }
 
+/* ── PAÍSES ──
+   Cada país tiene su propio nodo en Firebase, así que los calendarios son
+   independientes: nada de lo cargado en uno aparece en el otro. Argentina
+   conserva el nodo original 'calendar_data' para no migrar lo ya cargado.
+   'resps' en null usa la lista general; si el equipo de un país es distinto,
+   se pone acá su propia lista. */
+const PAISES={
+  ar:{nombre:'Argentina',flag:'🇦🇷',node:'calendar_data',resps:null},
+  uy:{nombre:'Uruguay',flag:'🇺🇾',node:'calendar_data_uy',resps:null}
+};
+function pais(){return PAISES[S.pais]||PAISES.ar}
+function RESPS(){return pais().resps||RESPONSABLES}
+function respColor(r){
+  const i=RESPS().indexOf(r);
+  return RESP_COLORS[(i<0?0:i)%RESP_COLORS.length];
+}
+
 const firebaseConfig={
   apiKey:"AIzaSyA2sTpsyFt4_SWhinvyGkNlTARw2zctMbw",
   authDomain:"colliers-calendar.firebaseapp.com",
@@ -512,24 +542,58 @@ const firebaseConfig={
 };
 firebase.initializeApp(firebaseConfig);
 const firebaseDb=firebase.database();
-const calendarRef=firebaseDb.ref('calendar_data');
+let dataRef=null;
 
-function save(d){calendarRef.set(d||{})}
+// Se escucha sólo el nodo del país activo; al cambiar de país se corta la
+// suscripción anterior y se vacían los datos para no mezclar calendarios.
+function suscribir(){
+  if(dataRef)dataRef.off();
+  S.data={};
+  dataRef=firebaseDb.ref(pais().node);
+  dataRef.on('value',(snap)=>{S.data=snap.val()||{};render()});
+  render();
+}
+function setPais(p){
+  if(!PAISES[p]||p===S.pais)return;
+  S.pais=p;
+  try{localStorage.setItem('colliers_pais',p)}catch(e){}
+  S.showModal=false;S.editIdx=null;
+  // Los temas, etiquetas y filtros son propios de cada país
+  S.q='';S.fAnio='';S.fArea='';S.fCanal='';S.fTipo='';S.fEstado='';S.fTag='';S.temLimit=TEM_PAGE;
+  suscribir();
+}
+
+function save(d){if(dataRef)dataRef.set(d||{})}
 
 const today=new Date();
-let S={view:'calendar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,eventMode:false,data:{},
+let S={view:'calendar',pais:'ar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,eventMode:false,data:{},
   q:'',fAnio:'',fArea:'',fCanal:'',fTipo:'',fEstado:'',fTag:'',groupBy:'tema',temLimit:150};
 const TEM_PAGE=150;
 
 function dayKey(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 
-/* ── LINK DIRECTO A UN DÍA (#AAAA-MM-DD) ── */
+/* ── LINK DIRECTO (#pais/AAAA-MM-DD) ──
+   El país va en el link para que un día compartido abra el calendario
+   correcto. Se siguen aceptando los links viejos sin país, como Argentina. */
 function dayUrl(y,m,d){
-  return location.origin+location.pathname+location.search+'#'+dayKey(y,m,d);
+  return location.origin+location.pathname+location.search+'#'+S.pais+'/'+dayKey(y,m,d);
+}
+function temarioUrl(){
+  return location.origin+location.pathname+location.search+'#'+S.pais+'/temario';
 }
 function applyHash(){
-  if((location.hash||'').toLowerCase()==='#temario'){S.view='temario';S.showModal=false;return true}
-  const mt=(location.hash||'').match(/^#(\d{4})-(\d{2})-(\d{2})$/);
+  let h=(location.hash||'').replace(/^#/,'');
+  let cod=null;
+  const mp=h.match(/^(ar|uy)(?:\/(.*))?$/i);
+  if(mp){cod=mp[1].toLowerCase();h=mp[2]||''}
+  else if(h)cod='ar';   // links viejos, sin país: son de Argentina
+  if(cod&&PAISES[cod]&&cod!==S.pais){
+    S.pais=cod;
+    try{localStorage.setItem('colliers_pais',cod)}catch(e){}
+  }
+  if(!h)return !!cod;   // '#uy' solo: cambia de país y deja la vista como está
+  if(h.toLowerCase()==='temario'){S.view='temario';S.showModal=false;return true}
+  const mt=h.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if(!mt)return false;
   const y=+mt[1],mo=+mt[2]-1,d=+mt[3];
   if(mo<0||mo>11)return false;
@@ -539,15 +603,19 @@ function applyHash(){
 }
 // replaceState no dispara hashchange: evita loops y no ensucia el historial
 function syncHash(){
-  let h='';
-  if(S.view==='calendar')h=S.selectedDay?'#'+dayKey(S.year,S.month,S.selectedDay):'';
-  else if(S.view==='temario')h='#temario';
+  let h='#'+S.pais;
+  if(S.view==='calendar'&&S.selectedDay)h+='/'+dayKey(S.year,S.month,S.selectedDay);
+  else if(S.view==='temario')h+='/temario';
   const url=location.pathname+location.search+h;
   if(location.pathname+location.search+location.hash!==url){
     try{history.replaceState(null,'',url)}catch(e){}
   }
 }
-window.addEventListener('hashchange',()=>{if(applyHash())render()});
+window.addEventListener('hashchange',()=>{
+  const antes=S.pais;
+  if(!applyHash())return;
+  if(S.pais!==antes)suscribir(); else render();
+});
 
 /* ── COMPARTIR ── */
 function fmtDateLong(y,m,d){
@@ -587,7 +655,7 @@ function dayToText(y,m,d){
   const items=S.data[dayKey(y,m,d)]||[];
   const done=items.filter(it=>it.done).length,pend=items.length-done;
   const fer=feriadoDe(y,m,d);
-  const L=['📅 Colliers — Calendario de Contenidos',fmtDateLong(y,m,d)];
+  const L=[`📅 Colliers ${pais().flag} ${pais().nombre} — Calendario de Contenidos`,fmtDateLong(y,m,d)];
   if(fer)L.push('🇦🇷 Feriado nacional: '+fer);
   L.push('');
   if(!items.length){
@@ -602,7 +670,7 @@ function dayToText(y,m,d){
   return L.join('\n').replace(/\n{3,}/g,'\n\n');
 }
 function itemToShareText(y,m,d,it){
-  return [`📅 Colliers — ${fmtDateLong(y,m,d)}`,'',itemToText(it),'',`🔗 Ver en el calendario: ${dayUrl(y,m,d)}`].join('\n');
+  return [`📅 Colliers ${pais().flag} ${pais().nombre} — ${fmtDateLong(y,m,d)}`,'',itemToText(it),'',`🔗 Ver en el calendario: ${dayUrl(y,m,d)}`].join('\n');
 }
 function toast(msg){
   let t=document.getElementById('toast');
@@ -645,7 +713,7 @@ function getMonthData(y,m){
   let total=0,done=0,byArea={},byCanal={},byResp={};
   AREAS.forEach(a=>byArea[a]={total:0,done:0});
   CANALES.forEach(c=>byCanal[c]={total:0,done:0});
-  RESPONSABLES.forEach(r=>byResp[r]={total:0,done:0});
+  RESPS().forEach(r=>byResp[r]={total:0,done:0});
   Object.keys(S.data).filter(k=>k.startsWith(pre)).forEach(k=>{
     (S.data[k]||[]).forEach(it=>{
       total++;
@@ -671,13 +739,19 @@ function isPastDay(y,m,d,sot){
   return new Date(y,m,d).getTime()<(sot===undefined?startOfToday():sot);
 }
 
-/* ── FERIADOS ARGENTINOS (Ley 27.399) ──
-   Se calculan solos: los de fecha fija, los atados a Pascua (Carnaval y
-   Viernes Santo) y los trasladables. Los "puentes turísticos" se fijan por
-   decreto cada año y NO se pueden calcular: se cargan a mano acá abajo. */
+/* ── FERIADOS ──
+   Se calculan solos, sin servicios externos. Los "puentes" / feriados por
+   decreto no son calculables: se cargan a mano en FERIADOS_EXTRA, por país. */
 const FERIADOS_EXTRA={
-  // Formato: 'AAAA-MM-DD':'Motivo'  — ver argentina.gob.ar/interior/feriados
-  // '2026-05-08':'Feriado con fines turísticos',
+  // Formato: 'AAAA-MM-DD':'Motivo'
+  ar:{
+    // AR: feriados con fines turísticos — argentina.gob.ar/interior/feriados
+    // '2026-05-08':'Feriado con fines turísticos',
+  },
+  uy:{
+    // UY: días de asueto o feriados puntuales por decreto
+    // '2026-05-08':'Asueto',
+  }
 };
 
 // Domingo de Pascua (Meeus/Jones/Butcher)
@@ -691,7 +765,7 @@ function pascua(y){
 }
 function sumarDias(dt,n){const d=new Date(dt);d.setDate(d.getDate()+n);return d}
 
-// Trasladables: martes y miércoles al lunes anterior; jueves y viernes al lunes siguiente
+// AR — trasladables: martes y miércoles al lunes anterior; jueves y viernes al lunes siguiente
 function trasladar(y,m,d){
   const dt=new Date(y,m,d),wd=dt.getDay();
   if(wd===2||wd===3)return sumarDias(dt,1-wd);
@@ -699,11 +773,10 @@ function trasladar(y,m,d){
   return dt;
 }
 
-const FERIADOS_CACHE={};
-function feriadosDe(y){
-  if(FERIADOS_CACHE[y])return FERIADOS_CACHE[y];
+// Argentina — Ley 27.399
+function feriadosAR(y){
   const f={};
-  const set=(dt,nombre)=>{f[dayKey(dt.getFullYear(),dt.getMonth(),dt.getDate())]=nombre};
+  const set=(dt,n)=>{f[dayKey(dt.getFullYear(),dt.getMonth(),dt.getDate())]=n};
   [[0,1,'Año Nuevo'],
    [2,24,'Día Nacional de la Memoria'],
    [3,2,'Día del Veterano y de los Caídos en Malvinas'],
@@ -721,8 +794,37 @@ function feriadosDe(y){
   set(trasladar(y,7,17),'Paso a la Inmortalidad del Gral. San Martín');
   set(trasladar(y,9,12),'Día del Respeto a la Diversidad Cultural');
   set(trasladar(y,10,20),'Día de la Soberanía Nacional');
-  Object.keys(FERIADOS_EXTRA).forEach(k=>{if(k.indexOf(y+'-')===0)f[k]=FERIADOS_EXTRA[k]});
-  FERIADOS_CACHE[y]=f;
+  return f;
+}
+
+/* Uruguay — feriados NO laborables (los únicos en los que no se trabaja).
+   Los feriados laborables (6/1, 19/4, 18/5, 19/6, 12/10 y 2/11) son días
+   hábiles y por eso no se pintan. */
+function feriadosUY(y){
+  const f={};
+  const set=(dt,n)=>{f[dayKey(dt.getFullYear(),dt.getMonth(),dt.getDate())]=n};
+  [[0,1,'Año Nuevo'],
+   [4,1,'Día de los Trabajadores'],
+   [6,18,'Jura de la Constitución'],
+   [7,25,'Declaratoria de la Independencia'],
+   [11,25,'Día de la Familia']].forEach(([m,d,n])=>set(new Date(y,m,d),n));
+  const p=pascua(y);
+  set(sumarDias(p,-48),'Lunes de Carnaval');
+  set(sumarDias(p,-47),'Martes de Carnaval');
+  set(sumarDias(p,-3),'Jueves de Turismo');
+  set(sumarDias(p,-2),'Viernes de Turismo');
+  return f;
+}
+
+const FERIADOS_CACHE={};
+function feriadosDe(y,cod){
+  cod=cod||S.pais;
+  const ck=cod+'-'+y;
+  if(FERIADOS_CACHE[ck])return FERIADOS_CACHE[ck];
+  const f=(cod==='uy')?feriadosUY(y):feriadosAR(y);
+  const extra=FERIADOS_EXTRA[cod]||{};
+  Object.keys(extra).forEach(k=>{if(k.indexOf(y+'-')===0)f[k]=extra[k]});
+  FERIADOS_CACHE[ck]=f;
   return f;
 }
 function feriadoDe(y,m,d){return feriadosDe(y)[dayKey(y,m,d)]||''}
@@ -762,6 +864,7 @@ function svgRing(pct,size=90){
 function render(){
   const root=document.getElementById('root');
   syncHash();
+  document.querySelectorAll('.pais-btn').forEach(b=>b.classList.toggle('active',b.dataset.pais===S.pais));
   // Guardar el foco: un refresh de Firebase no debe cortar lo que se está tipeando
   const ae=document.activeElement,aid=ae&&ae.id?ae.id:null;
   const caret=(aid&&typeof ae.selectionStart==='number')?[ae.selectionStart,ae.selectionEnd]:null;
@@ -1223,7 +1326,7 @@ function renderTemario(){
 
 function temarioToText(rows){
   const done=rows.filter(r=>r.it.done).length;
-  const L=['📚 Colliers — Temario de contenidos'];
+  const L=[`📚 Colliers ${pais().flag} ${pais().nombre} — Temario de contenidos`];
   const f=temFilterLabels();
   if(f.length)L.push('Filtros: '+f.join(' · '));
   const pend=rows.length-done;
@@ -1251,7 +1354,7 @@ function temarioToText(rows){
     }
     L.push('');
   });
-  L.push(`🔗 Temario completo: ${location.origin+location.pathname+location.search}#temario`);
+  L.push(`🔗 Temario completo: ${temarioUrl()}`);
   return L.join('\n').replace(/\n{3,}/g,'\n\n');
 }
 
@@ -1295,7 +1398,7 @@ function renderMonthly(){
   }
 
   // Por responsable
-  const respsD=RESPONSABLES.filter(r=>md.byResp[r]?.total>0);
+  const respsD=RESPS().filter(r=>md.byResp[r]?.total>0);
   if(respsD.length){
     const sec=el('div','dash-section');
     sec.appendChild(el('div','dash-s-title','Por responsable'));
@@ -1303,7 +1406,7 @@ function renderMonthly(){
     respsD.forEach(resp=>{
       const rd2=md.byResp[resp],rp=rd2.total?Math.round(rd2.done/rd2.total*100):0;
       const initials=resp.split(' ').map(s=>s[0]).join('').toUpperCase();
-      const color=RESP_COLORS[RESPONSABLES.indexOf(resp)];
+      const color=respColor(resp);
       const card=el('div','resp-card');
       card.innerHTML=`<div class="resp-av" style="background:${color}">${initials}</div>
         <div class="resp-body">
@@ -1376,13 +1479,13 @@ function renderAnnual(){
   let yt=0,yd=0;
   const byA={};AREAS.forEach(a=>byA[a]={total:0,done:0});
   const byC={};CANALES.forEach(c=>byC[c]={total:0,done:0});
-  const byR={};RESPONSABLES.forEach(r=>byR[r]={total:0,done:0});
+  const byR={};RESPS().forEach(r=>byR[r]={total:0,done:0});
   for(let m=0;m<12;m++){
     const md=getMonthData(S.year,m);
     yt+=md.total;yd+=md.done;
     AREAS.forEach(a=>{byA[a].total+=md.byArea[a]?.total||0;byA[a].done+=md.byArea[a]?.done||0});
     CANALES.forEach(c=>{byC[c].total+=md.byCanal[c]?.total||0;byC[c].done+=md.byCanal[c]?.done||0});
-    RESPONSABLES.forEach(r=>{byR[r].total+=md.byResp[r]?.total||0;byR[r].done+=md.byResp[r]?.done||0});
+    RESPS().forEach(r=>{byR[r].total+=md.byResp[r]?.total||0;byR[r].done+=md.byResp[r]?.done||0});
   }
   const yp=yt?Math.round(yd/yt*100):0;
 
@@ -1433,7 +1536,7 @@ function renderAnnual(){
   }
 
   // Por responsable
-  const respsDA=RESPONSABLES.filter(r=>byR[r].total>0);
+  const respsDA=RESPS().filter(r=>byR[r].total>0);
   if(respsDA.length){
     const sec=el('div','dash-section');
     sec.appendChild(el('div','dash-s-title','Por responsable — año completo'));
@@ -1441,7 +1544,7 @@ function renderAnnual(){
     respsDA.forEach(resp=>{
       const rd2=byR[resp],rp=rd2.total?Math.round(rd2.done/rd2.total*100):0;
       const initials=resp.split(' ').map(s=>s[0]).join('').toUpperCase();
-      const color=RESP_COLORS[RESPONSABLES.indexOf(resp)];
+      const color=respColor(resp);
       const card=el('div','resp-card');
       card.innerHTML=`<div class="resp-av" style="background:${color}">${initials}</div>
         <div class="resp-body">
@@ -1640,7 +1743,7 @@ function renderModal(){
       </div>
       <div class="form-row">
         <label>Responsable</label>
-        <div class="toggle-chips" id="fi-resps">${chipRow(RESPONSABLES,selResps,RESP_COLORS)}</div>
+        <div class="toggle-chips" id="fi-resps">${chipRow(RESPS(),selResps,RESP_COLORS)}</div>
       </div>
       <div class="form-row">
         <label>Descripción / Notas</label>
@@ -1723,7 +1826,7 @@ function renderModal(){
     </div>
     <div class="form-row">
       <label>Responsable</label>
-      <div class="toggle-chips" id="fi-resps">${chipRow(RESPONSABLES,selResps,RESP_COLORS)}</div>
+      <div class="toggle-chips" id="fi-resps">${chipRow(RESPS(),selResps,RESP_COLORS)}</div>
     </div>
     <div class="form-row">
       <label>Canal / Sitio</label>
@@ -1795,11 +1898,10 @@ function renderModal(){
   return overlay;
 }
 
-// Link directo (#AAAA-MM-DD): posicionar el calendario antes del primer render
+// Arranque: país guardado, después el link directo (que puede cambiarlo)
+S.pais=(localStorage.getItem('colliers_pais')==='uy')?'uy':'ar';
 applyHash();
-render();
-
-calendarRef.on('value',(snap)=>{S.data=snap.val()||{};render();});
+suscribir();
 
 // ── TEMA ──
 function toggleTheme(){
