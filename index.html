@@ -97,6 +97,7 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 .exp-mes-n{font-size:11px;font-weight:700;color:var(--c-deep);text-transform:uppercase;letter-spacing:0.3px}
 .exp-mes-c{font-size:9px;color:var(--c-mg)}
 .exp-mes.on .exp-mes-n,.exp-mes.on .exp-mes-c{color:#fff}
+.exp-hint{font-size:10px;color:var(--c-mg);margin-top:8px;line-height:1.4}
 .exp-preview{max-height:230px;overflow-y:auto;border:1.5px solid var(--c-pbg);border-radius:3px;padding:10px 12px;background:var(--c-bg)}
 .exp-resumen{font-size:11px;font-weight:700;color:var(--c-dg);margin-bottom:10px}
 .exp-area{margin-bottom:12px}
@@ -1680,10 +1681,11 @@ function descargar(nombre,contenido,mime){
 }
 
 // Documento para presentar: una sección por área, cada una en su hoja al imprimir
-function expDocHTML(){
+function expDocHTML(titulo){
   const rows=expFiltrados(),grupos=expGrupos(rows),e=escAttr;
   const done=rows.filter(r=>r.it.done).length;
   const hoy=new Date();
+  const per=expPeriodo();
   const secciones=grupos.map(g=>{
     const gd=g.list.filter(r=>r.it.done).length;
     const filas=g.list.map(r=>{
@@ -1700,7 +1702,7 @@ function expDocHTML(){
     }).join('');
     return `<section class="area">
       <h2>${e(g.nombre)}</h2>
-      <p class="sub">${g.list.length} ${g.list.length===1?'contenido':'contenidos'} · ${gd} ${gd===1?'listo':'listos'} · ${g.list.length-gd} ${g.list.length-gd===1?'pendiente':'pendientes'}</p>
+      <p class="sub">Colliers ${e(pais().nombre)} · ${e(per)} · ${g.list.length} ${g.list.length===1?'contenido':'contenidos'} · ${gd} ${gd===1?'listo':'listos'} · ${g.list.length-gd} ${g.list.length-gd===1?'pendiente':'pendientes'}</p>
       <table><thead><tr><th>Fecha</th><th>Tema</th><th>Subtema</th><th>Tipo</th><th>Canal</th><th>A cargo</th><th>Estado</th><th>Link</th></tr></thead>
       <tbody>${filas}</tbody></table>
     </section>`;
@@ -1708,7 +1710,7 @@ function expDocHTML(){
   return `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Colliers ${e(pais().nombre)} — ${e(expPeriodo())}</title>
+<title>${e(titulo||('Colliers '+pais().nombre+' — '+per))}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Open Sans',Verdana,Arial,sans-serif;color:#000759;background:#fff;padding:28px 34px;font-size:12px}
@@ -1728,18 +1730,59 @@ td.estado{white-space:nowrap;font-weight:700;color:#ED1B34}
 tr.ok td.estado{color:#1d8177}
 a{color:#1C54F4}
 footer{margin-top:28px;border-top:1px solid #DBE5FF;padding-top:10px;font-size:10px;color:#7B8BBD}
+@page{margin:14mm}
 @media print{
-  body{padding:0;font-size:11px}
-  .area{page-break-before:always}
-  .area:first-of-type{page-break-before:auto}
+  body{padding:0;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .area{page-break-before:always;break-before:page;margin-bottom:0}
+  .area:first-of-type{page-break-before:auto;break-before:auto}
+  thead{display:table-header-group}
+  tr{page-break-inside:avoid;break-inside:avoid}
   a{text-decoration:none}
+  footer{page-break-before:avoid}
 }
 </style></head><body>
-<div class="top"><div class="acc"></div><h1>Colliers ${e(pais().nombre)} — Calendario de Contenidos</h1><div class="per">${e(expPeriodo())}</div></div>
+<div class="top"><div class="acc"></div><h1>Colliers ${e(pais().nombre)} — Calendario de Contenidos</h1><div class="per">${e(per)}</div></div>
 <div class="resumen">${rows.length} ${rows.length===1?'contenido':'contenidos'} · ${done} ${done===1?'listo':'listos'} · ${rows.length-done} ${rows.length-done===1?'pendiente':'pendientes'}${S.expAreas.length?' · Áreas: '+e(S.expAreas.join(', ')):''}</div>
 ${secciones||'<p>No hay contenido calendarizado en el período elegido.</p>'}
 <footer>Generado el ${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()} desde el calendario de contenidos.</footer>
 </body></html>`;
+}
+
+/* PDF: se arma el documento en un iframe oculto y se manda a imprimir, con
+   "Guardar como PDF" como destino. Sin librerías externas, así que no depende
+   de ningún CDN y el PDF sale con texto real (no una imagen). */
+function expPDF(){
+  const rows=expFiltrados();
+  if(!rows.length){toast('No hay contenido en el período elegido');return}
+  const nombre=expNombreArchivo('pdf').replace(/\.pdf$/,'');
+  const tituloPrevio=document.title;
+  const viejo=document.getElementById('exp-print');
+  if(viejo)viejo.remove();
+  const fr=document.createElement('iframe');
+  fr.id='exp-print';fr.setAttribute('aria-hidden','true');
+  fr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(fr);
+  let lanzado=false;
+  const imprimir=()=>{
+    if(lanzado)return;
+    lanzado=true;
+    try{
+      document.title=nombre;           // el navegador propone este nombre al guardar
+      fr.contentWindow.focus();
+      fr.contentWindow.print();
+      toast('Elegí "Guardar como PDF" en el destino');
+    }catch(e){toast('No se pudo abrir la ventana de impresión')}
+    setTimeout(()=>{document.title=tituloPrevio},2000);
+  };
+  try{
+    const d=fr.contentWindow.document;
+    d.open();d.write(expDocHTML(nombre));d.close();
+    fr.onload=()=>setTimeout(imprimir,60);
+    setTimeout(imprimir,350);          // por si onload ya pasó
+  }catch(e){
+    fr.remove();
+    toast('No se pudo generar el PDF');
+  }
 }
 
 function expCSV(){
@@ -1897,17 +1940,21 @@ function renderExportModal(){
   m.appendChild(rowPrev);
 
   const btns=el('div','btn-row');
-  const bh=el('button','btn-primary','⬇ Documento');
-  bh.title='Documento para presentar o imprimir (una hoja por área)';
-  bh.onclick=()=>descargar(expNombreArchivo('html'),expDocHTML(),'text/html');
+  const bp=el('button','btn-primary','⬇ PDF');
+  bp.title='Documento para presentar, una hoja por área';
+  bp.onclick=()=>expPDF();
   const bc=el('button','btn-primary','⬇ Excel (CSV)');
   bc.style='background:var(--c-teal)';
   bc.title='Planilla para abrir en Excel';
   bc.onclick=()=>descargar(expNombreArchivo('csv'),expCSV(),'text/csv');
+  const bh=el('button','btn-share','⬇ HTML');
+  bh.title='El mismo documento como archivo, para mandar por mail';
+  bh.onclick=()=>descargar(expNombreArchivo('html'),expDocHTML(),'text/html');
   const bt=el('button','btn-share','⧉ Copiar');
   bt.onclick=()=>copyText(expTexto(),'✓ Listado copiado');
-  btns.appendChild(bh);btns.appendChild(bc);btns.appendChild(bt);
+  btns.appendChild(bp);btns.appendChild(bc);btns.appendChild(bh);btns.appendChild(bt);
   m.appendChild(btns);
+  m.appendChild(txt('div','exp-hint','El PDF se genera con la ventana de impresión: elegí "Guardar como PDF" en el destino. Cada área sale en su propia hoja.'));
 
   overlay.appendChild(m);
   overlay.onclick=(ev)=>{if(ev.target===overlay)cerrar()};
