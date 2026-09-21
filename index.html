@@ -1670,7 +1670,8 @@ function expTipo(it){return it.isEvent?'Evento':(it.tipo||'')}
 
 function descargar(nombre,contenido,mime){
   try{
-    const blob=new Blob([contenido],{type:mime+';charset=utf-8'});
+    const esTexto=typeof contenido==='string';
+    const blob=new Blob([contenido],{type:mime+(esTexto?';charset=utf-8':'')});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url;a.download=nombre;a.style.display='none';
@@ -1748,10 +1749,209 @@ ${secciones||'<p>No hay contenido calendarizado en el período elegido.</p>'}
 </body></html>`;
 }
 
-/* PDF: se arma el documento en un iframe oculto y se manda a imprimir, con
-   "Guardar como PDF" como destino. Sin librerías externas, así que no depende
-   de ningún CDN y el PDF sale con texto real (no una imagen). */
+/* ── PDF ──
+   El archivo se escribe a mano, sin librerías ni CDN: baja como .pdf de
+   verdad, con texto seleccionable (no una imagen) y links clickeables.
+   Se usan las fuentes Helvetica estándar del formato, así que no hay que
+   incrustar nada y los acentos salen por WinAnsiEncoding. */
+const WINANSI={0x20AC:0x80,0x201A:0x82,0x0192:0x83,0x201E:0x84,0x2026:0x85,0x2020:0x86,0x2021:0x87,
+  0x02C6:0x88,0x2030:0x89,0x0160:0x8A,0x2039:0x8B,0x0152:0x8C,0x017D:0x8E,0x2018:0x91,0x2019:0x92,
+  0x201C:0x93,0x201D:0x94,0x2022:0x95,0x2013:0x96,0x2014:0x97,0x02DC:0x98,0x2122:0x99,0x0161:0x9A,
+  0x203A:0x9B,0x0153:0x9C,0x017E:0x9E,0x0178:0x9F};
+// Lo que no se puede representar (emojis, por ejemplo) se descarta
+function pdfTxt(s){
+  let out='';
+  for(const ch of String(s==null?'':s)){
+    const c=ch.codePointAt(0);
+    let b=null;
+    if(c>=32&&c<=126)b=c;
+    else if(c>=0xA0&&c<=0xFF)b=c;
+    else if(WINANSI[c])b=WINANSI[c];
+    else if(c===9||c===10)b=32;
+    if(b===null)continue;
+    const k=String.fromCharCode(b);
+    out+=(k==='('||k===')'||k==='\\')?'\\'+k:k;
+  }
+  return out.replace(/ {2,}/g,' ').trim();   // si se descartó algo, no dejar huecos
+}
+function pdfStrU16(s){
+  const esc=k=>(k==='('||k===')'||k==='\\')?'\\'+k:k;
+  const par=c=>esc(String.fromCharCode((c>>8)&0xFF))+esc(String.fromCharCode(c&0xFF));
+  let out='\xFE\xFF';
+  for(const ch of String(s==null?'':s)){
+    let c=ch.codePointAt(0);
+    if(c>0xFFFF){c-=0x10000;out+=par(0xD800+(c>>10))+par(0xDC00+(c&0x3FF))}
+    else out+=par(c);
+  }
+  return out;
+}
+// Anchos de Helvetica (por mil), 32..126
+const HELV_W=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,
+  556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,
+  1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,
+  667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,
+  333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,
+  556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+function anchoTexto(s,size,bold){
+  let w=0;
+  for(const ch of String(s==null?'':s)){
+    const c=ch.codePointAt(0);
+    if(c>=32&&c<=126)w+=HELV_W[c-32];
+    else if(c>=0xC0&&c<=0xDF)w+=700;
+    else if(c>=0xA0)w+=556;
+  }
+  return w/1000*size*(bold?1.08:1);
+}
+function recortar(s,maxW,size,bold){
+  s=String(s==null?'':s);
+  if(anchoTexto(s,size,bold)<=maxW)return s;
+  while(s.length>1&&anchoTexto(s+'…',size,bold)>maxW)s=s.slice(0,-1);
+  return s+'…';
+}
+function envolver(s,maxW,size,bold,maxLineas){
+  const palabras=String(s==null?'':s).split(/\s+/).filter(Boolean);
+  const out=[];let cur='';
+  palabras.forEach(p=>{
+    const t=cur?cur+' '+p:p;
+    if(anchoTexto(t,size,bold)<=maxW){cur=t;return}
+    if(cur){out.push(cur);cur=''}
+    let resto=p;
+    while(anchoTexto(resto,size,bold)>maxW&&resto.length>1){
+      let i=resto.length-1;
+      while(i>1&&anchoTexto(resto.slice(0,i),size,bold)>maxW)i--;
+      out.push(resto.slice(0,i));resto=resto.slice(i);
+    }
+    cur=resto;
+  });
+  if(cur)out.push(cur);
+  if(!out.length)return [''];
+  if(maxLineas&&out.length>maxLineas){
+    const rec=out.slice(0,maxLineas);
+    rec[maxLineas-1]=recortar(rec[maxLineas-1]+'…',maxW,size,bold);
+    return rec;
+  }
+  return out;
+}
+function pdfRGB(hex){
+  const n=parseInt(hex.slice(1),16);
+  return [((n>>16)&255)/255,((n>>8)&255)/255,(n&255)/255].map(v=>v.toFixed(3)).join(' ');
+}
+
 function expPDF(){
+  const rows=expFiltrados();
+  if(!rows.length){toast('No hay contenido en el período elegido');return}
+  const grupos=expGrupos(rows);
+  const W=841.89,H=595.28,M=36;                 // A4 apaisado: entran las 8 columnas
+  const per=expPeriodo(),titulo='Colliers '+pais().nombre+' — Calendario de Contenidos';
+  const COLS=[{t:'Fecha',w:70},{t:'Tema',w:190,bold:true,lin:2},{t:'Subtema',w:150,lin:2},
+    {t:'Tipo',w:80},{t:'Canal',w:110},{t:'A cargo',w:90},{t:'Estado',w:50},{t:'Link',w:30}];
+  const paginas=[];let pg=null,y=0;
+
+  const texto=(x,top,s,size,bold,color)=>{
+    pg.ops.push(`BT ${pdfRGB(color||'#000759')} rg /${bold?'F2':'F1'} ${size} Tf 1 0 0 1 ${x.toFixed(2)} ${(H-top).toFixed(2)} Tm (${pdfTxt(s)}) Tj ET`);
+  };
+  const rect=(x,top,w,h,color)=>{
+    pg.ops.push(`${pdfRGB(color)} rg ${x.toFixed(2)} ${(H-top-h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re f`);
+  };
+  const nuevaPagina=()=>{
+    pg={ops:[],links:[]};paginas.push(pg);
+    rect(0,0,W,44,'#25408F');
+    rect(M,20,20,3,'#FFD400');
+    texto(M+30,27,titulo,11,true,'#FFFFFF');
+    texto(W-M-anchoTexto(per,9,false),27,per,9,false,'#C3E6FF');
+    y=72;
+  };
+  const tituloArea=(g,sigue)=>{
+    texto(M,y,g.nombre.toUpperCase()+(sigue?' (cont.)':''),12,true,'#000759');
+    y+=13;
+    const gd=g.list.filter(r=>r.it.done).length;
+    texto(M,y,`Colliers ${pais().nombre} · ${per} · ${g.list.length} ${g.list.length===1?'contenido':'contenidos'} · ${gd} ${gd===1?'listo':'listos'} · ${g.list.length-gd} ${g.list.length-gd===1?'pendiente':'pendientes'}`,8.5,false,'#7B8BBD');
+    y+=6;rect(M,y,W-2*M,1.2,'#DBE5FF');y+=18;
+  };
+  const cabeceraTabla=()=>{
+    let x=M;
+    COLS.forEach(c=>{texto(x,y,c.t.toUpperCase(),7.5,true,'#56648F');x+=c.w});
+    y+=5;rect(M,y,W-2*M,0.6,'#DBE5FF');y+=13;
+  };
+
+  grupos.forEach(g=>{
+    nuevaPagina();tituloArea(g);cabeceraTabla();
+    g.list.forEach(r=>{
+      const it=r.it,href=hrefOf(it.link);
+      const celdas=[[expFecha(r)],
+        envolver(temaOf(it),COLS[1].w-8,9,true,2),
+        envolver(subtemaOf(it),COLS[2].w-8,9,false,2),
+        [recortar(expTipo(it),COLS[3].w-8,9)],
+        [recortar(getCanales(it).join(', '),COLS[4].w-8,9)],
+        [recortar(getResps(it).join(', '),COLS[5].w-8,9)],
+        [expEstado(it)],[href?'Ver':'']];
+      const nl=Math.max.apply(null,celdas.map(c=>c.length));
+      const alto=13+(nl-1)*10.5;
+      if(y+alto>H-42){nuevaPagina();tituloArea(g,true);cabeceraTabla()}
+      let x=M;
+      celdas.forEach((c,i)=>{
+        const col=COLS[i];
+        const color=i===0?'#1C54F4':(i===6?(it.done?'#1d8177':'#ED1B34'):(i===7?'#1C54F4':'#000759'));
+        c.forEach((linea,j)=>texto(x,y+j*10.5,linea,i===0||i===6?8.5:9,!!col.bold,color));
+        if(i===7&&href)
+          pg.links.push({url:href,rect:[x.toFixed(2),(H-y-2).toFixed(2),(x+20).toFixed(2),(H-y+8).toFixed(2)]});
+        x+=col.w;
+      });
+      y+=alto;
+      rect(M,y-9,W-2*M,0.4,'#EEF2FB');
+    });
+  });
+
+  // Pie con numeración, una vez que se sabe el total
+  const hoy=new Date();
+  const pie=`Generado el ${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()}`;
+  paginas.forEach((p,i)=>{
+    pg=p;
+    rect(M,H-34,W-2*M,0.6,'#DBE5FF');
+    texto(M,H-22,pie,7.5,false,'#7B8BBD');
+    const n=`Página ${i+1} de ${paginas.length}`;
+    texto(W-M-anchoTexto(n,7.5,false),H-22,n,7.5,false,'#7B8BBD');
+  });
+
+  // ── Armado del archivo ──
+  let id=5;const cuerpo=[],kids=[];
+  paginas.forEach(p=>{
+    const cid=++id,txtc=p.ops.join('\n');
+    cuerpo.push({id:cid,s:`${cid} 0 obj\n<< /Length ${txtc.length} >>\nstream\n${txtc}\nendstream\nendobj\n`});
+    const an=[];
+    p.links.forEach(l=>{
+      const aid=++id;an.push(aid);
+      cuerpo.push({id:aid,s:`${aid} 0 obj\n<< /Type /Annot /Subtype /Link /Border [0 0 0] /Rect [${l.rect.join(' ')}] /A << /S /URI /URI (${pdfTxt(l.url)}) >> >>\nendobj\n`});
+    });
+    const pid=++id;kids.push(pid);
+    cuerpo.push({id:pid,s:`${pid} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W.toFixed(2)} ${H.toFixed(2)}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${cid} 0 R${an.length?' /Annots ['+an.map(a=>a+' 0 R').join(' ')+']':''} >>\nendobj\n`});
+  });
+  const dos=n=>String(n).padStart(2,'0');
+  const fechaPDF=`D:${hoy.getFullYear()}${dos(hoy.getMonth()+1)}${dos(hoy.getDate())}${dos(hoy.getHours())}${dos(hoy.getMinutes())}${dos(hoy.getSeconds())}`;
+  const objetos=[
+    `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`,
+    `2 0 obj\n<< /Type /Pages /Count ${kids.length} /Kids [${kids.map(k=>k+' 0 R').join(' ')}] >>\nendobj\n`,
+    `3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n`,
+    `4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj\n`,
+    `5 0 obj\n<< /Title (${pdfStrU16(titulo+' — '+per)}) /Producer (Colliers Calendario de Contenidos) /CreationDate (${fechaPDF}) >>\nendobj\n`
+  ].concat(cuerpo.sort((a,b)=>a.id-b.id).map(o=>o.s));
+
+  let doc='%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
+  const offsets=[];
+  objetos.forEach(o=>{offsets.push(doc.length);doc+=o});
+  const inicioXref=doc.length;
+  doc+=`xref\n0 ${objetos.length+1}\n0000000000 65535 f \n`;
+  offsets.forEach(off=>{doc+=String(off).padStart(10,'0')+' 00000 n \n'});
+  doc+=`trailer\n<< /Size ${objetos.length+1} /Root 1 0 R /Info 5 0 R >>\nstartxref\n${inicioXref}\n%%EOF\n`;
+
+  const bytes=new Uint8Array(doc.length);
+  for(let i=0;i<doc.length;i++)bytes[i]=doc.charCodeAt(i)&0xFF;
+  descargar(expNombreArchivo('pdf'),bytes,'application/pdf');
+}
+
+/* Imprimir: el mismo documento pero en HTML, por si se quiere sacar en papel
+   o guardarlo con el diálogo del navegador. */
+function expImprimir(){
   const rows=expFiltrados();
   if(!rows.length){toast('No hay contenido en el período elegido');return}
   const nombre=expNombreArchivo('pdf').replace(/\.pdf$/,'');
@@ -1767,10 +1967,9 @@ function expPDF(){
     if(lanzado)return;
     lanzado=true;
     try{
-      document.title=nombre;           // el navegador propone este nombre al guardar
+      document.title=nombre;
       fr.contentWindow.focus();
       fr.contentWindow.print();
-      toast('Elegí "Guardar como PDF" en el destino');
     }catch(e){toast('No se pudo abrir la ventana de impresión')}
     setTimeout(()=>{document.title=tituloPrevio},2000);
   };
@@ -1778,11 +1977,8 @@ function expPDF(){
     const d=fr.contentWindow.document;
     d.open();d.write(expDocHTML(nombre));d.close();
     fr.onload=()=>setTimeout(imprimir,60);
-    setTimeout(imprimir,350);          // por si onload ya pasó
-  }catch(e){
-    fr.remove();
-    toast('No se pudo generar el PDF');
-  }
+    setTimeout(imprimir,350);
+  }catch(e){fr.remove();toast('No se pudo abrir la ventana de impresión')}
 }
 
 function expCSV(){
@@ -1947,14 +2143,14 @@ function renderExportModal(){
   bc.style='background:var(--c-teal)';
   bc.title='Planilla para abrir en Excel';
   bc.onclick=()=>descargar(expNombreArchivo('csv'),expCSV(),'text/csv');
-  const bh=el('button','btn-share','⬇ HTML');
-  bh.title='El mismo documento como archivo, para mandar por mail';
-  bh.onclick=()=>descargar(expNombreArchivo('html'),expDocHTML(),'text/html');
+  const bh=el('button','btn-share','🖨 Imprimir');
+  bh.title='Abrir la ventana de impresión con el mismo documento';
+  bh.onclick=()=>expImprimir();
   const bt=el('button','btn-share','⧉ Copiar');
   bt.onclick=()=>copyText(expTexto(),'✓ Listado copiado');
   btns.appendChild(bp);btns.appendChild(bc);btns.appendChild(bh);btns.appendChild(bt);
   m.appendChild(btns);
-  m.appendChild(txt('div','exp-hint','El PDF se genera con la ventana de impresión: elegí "Guardar como PDF" en el destino. Cada área sale en su propia hoja.'));
+  m.appendChild(txt('div','exp-hint','El PDF baja como archivo, con una hoja por área y los links clickeables. El CSV se abre en Excel.'));
 
   overlay.appendChild(m);
   overlay.onclick=(ev)=>{if(ev.target===overlay)cerrar()};
