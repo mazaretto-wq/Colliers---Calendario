@@ -80,6 +80,34 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 .modal-title{font-size:13px;font-weight:700;color:var(--c-deep);margin-bottom:1.25rem;text-transform:uppercase;letter-spacing:0.4px;display:flex;justify-content:space-between;align-items:center}
 .modal-date{font-size:12px;color:var(--c-mg);font-weight:400;text-transform:none;letter-spacing:0}
 .modal-feriado{color:var(--c-red);font-weight:700}
+/* ── EXPORTAR ── */
+.btn-export{background:none;border:1.5px solid var(--c-lg);border-radius:2px;padding:5px 12px;cursor:pointer;font-size:11px;font-weight:700;color:var(--c-dark);font-family:'Open Sans',Verdana,sans-serif;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap}
+.btn-export:hover{background:var(--c-pbg);border-color:var(--c-medium)}
+.modal-wide{width:680px}
+.exp-yearnav{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.exp-yearnav .nav-btn{padding:2px 10px;font-size:13px}
+.exp-year{font-size:13px;font-weight:700;color:var(--c-deep);min-width:46px;text-align:center}
+.exp-mini{background:none;border:1.5px solid var(--c-lg);border-radius:2px;padding:4px 10px;font-size:10px;font-weight:700;color:var(--c-dg);cursor:pointer;font-family:'Open Sans',Verdana,sans-serif}
+.exp-mini:hover{border-color:var(--c-medium);color:var(--c-medium)}
+.exp-mini:last-child{margin-left:auto}
+.exp-meses{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.exp-mes{background:none;border:1.5px solid var(--c-lg);border-radius:3px;padding:7px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-family:'Open Sans',Verdana,sans-serif}
+.exp-mes:hover{border-color:var(--c-medium)}
+.exp-mes.on{background:var(--c-dark);border-color:var(--c-dark)}
+.exp-mes-n{font-size:11px;font-weight:700;color:var(--c-deep);text-transform:uppercase;letter-spacing:0.3px}
+.exp-mes-c{font-size:9px;color:var(--c-mg)}
+.exp-mes.on .exp-mes-n,.exp-mes.on .exp-mes-c{color:#fff}
+.exp-preview{max-height:230px;overflow-y:auto;border:1.5px solid var(--c-pbg);border-radius:3px;padding:10px 12px;background:var(--c-bg)}
+.exp-resumen{font-size:11px;font-weight:700;color:var(--c-dg);margin-bottom:10px}
+.exp-area{margin-bottom:12px}
+.exp-area-title{display:flex;align-items:center;gap:7px;border-bottom:2px solid var(--c-pbg);padding-bottom:4px;margin-bottom:2px}
+.exp-area-name{font-size:11px;font-weight:700;color:var(--c-deep);text-transform:uppercase;letter-spacing:0.4px}
+.exp-fila{display:flex;align-items:flex-start;gap:9px;padding:6px 0;border-bottom:1px solid var(--c-pbg)}
+.exp-fila:last-child{border-bottom:none}
+.exp-fecha{font-size:10px;font-weight:700;color:var(--c-medium);width:66px;flex-shrink:0;padding-top:1px}
+.exp-cuerpo{flex:1;min-width:0}
+.exp-tema{font-size:12px;font-weight:600;color:var(--c-deep)}
+.exp-meta{font-size:10px;color:var(--c-mg);margin-top:2px}
 .modal-close{background:none;border:none;cursor:pointer;font-size:18px;color:var(--c-mg);line-height:1}
 .modal-close:hover{color:var(--c-red)}
 .form-row{margin-bottom:12px}
@@ -292,6 +320,16 @@ body.dark .item-no-tema:hover{color:#58a6ff}
 body.dark .badge-area{background:#30363d;color:#e6edf3}
 body.dark .badge-resp{background:#30363d;color:#e6edf3;border-color:#30363d}
 body.dark .modal-overlay{background:rgba(0,0,0,0.7)}
+body.dark .btn-export{border-color:#30363d;color:#e6edf3}
+body.dark .btn-export:hover{background:#161b22;border-color:var(--c-medium)}
+body.dark .exp-mes{border-color:#30363d}
+body.dark .exp-mes-n{color:#e6edf3}
+body.dark .exp-mes.on{background:var(--c-medium);border-color:var(--c-medium)}
+body.dark .exp-mini{border-color:#30363d;color:#8b949e}
+body.dark .exp-year,body.dark .exp-area-name,body.dark .exp-tema{color:#e6edf3}
+body.dark .exp-preview{background:#0d1117;border-color:#30363d}
+body.dark .exp-area-title,body.dark .exp-fila{border-color:#30363d}
+body.dark .exp-fecha{color:#58a6ff}
 body.dark .modal{background:#161b22}
 body.dark .modal-title{color:#e6edf3}
 body.dark .form-row label{color:#8b949e}
@@ -567,7 +605,8 @@ function save(d){if(dataRef)dataRef.set(d||{})}
 
 const today=new Date();
 let S={view:'calendar',pais:'ar',year:today.getFullYear(),month:today.getMonth(),selectedDay:null,showModal:false,editIdx:null,eventMode:false,data:{},
-  q:'',fAnio:'',fArea:'',fCanal:'',fTipo:'',fEstado:'',fTag:'',groupBy:'tema',temLimit:150};
+  q:'',fAnio:'',fArea:'',fCanal:'',fTipo:'',fEstado:'',fTag:'',groupBy:'tema',temLimit:150,
+  exportOpen:false,expYear:today.getFullYear(),expMeses:[],expAreas:[]};
 const TEM_PAGE=150;
 
 function dayKey(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
@@ -875,6 +914,7 @@ function render(){
   else if(S.view==='monthly')root.appendChild(renderMonthly());
   else root.appendChild(renderAnnual());
   if(S.showModal)document.body.appendChild(renderModal());
+  if(S.exportOpen)document.body.appendChild(renderExportModal());
   if(aid){
     const n=document.getElementById(aid);
     if(n&&n!==document.activeElement){
@@ -902,12 +942,13 @@ function txt(tag,cls,text){
   return e;
 }
 
-function navRow(title,onPrev,onNext){
+function navRow(title,onPrev,onNext,extra){
   const r=el('div','nav-row');
   const pb=el('button','nav-btn','&#8249;');pb.onclick=onPrev;
   const nb=el('button','nav-btn','&#8250;');nb.onclick=onNext;
   const t=el('h2','',title);
   r.appendChild(pb);r.appendChild(t);r.appendChild(nb);
+  if(extra)r.appendChild(extra);
   return r;
 }
 
@@ -921,9 +962,13 @@ function statsGrid(cards){
 
 function renderCalendar(){
   const wrap=el('div');
+  const expBtn=el('button','btn-export','⬇ Exportar');
+  expBtn.title='Descargar el mes o los meses que elijas, agrupado por área';
+  expBtn.onclick=()=>abrirExport();
   wrap.appendChild(navRow(MONTHS[S.month]+' '+S.year,
     ()=>{S.month--;if(S.month<0){S.month=11;S.year--;}render()},
-    ()=>{S.month++;if(S.month>11){S.month=0;S.year++;}render()}));
+    ()=>{S.month++;if(S.month>11){S.month=0;S.year++;}render()},
+    expBtn));
 
   const md=getMonthData(S.year,S.month);
   const pct=md.total?Math.round(md.done/md.total*100):0;
@@ -1577,6 +1622,298 @@ function renderAnnual(){
   }
 
   return wrap;
+}
+
+/* ── EXPORTAR MESES ──
+   Arma un listado de lo calendarizado agrupado por área, para presentarle a
+   cada una lo suyo. Se puede ver en pantalla, copiar, o bajar como documento
+   (HTML, que se imprime o se pasa a PDF con una hoja por área) o como CSV. */
+function expKey(y,m){return `${y}-${String(m+1).padStart(2,'0')}`}
+function expLabel(k){const pr=k.split('-');return MONTHS[+pr[1]-1]+' '+pr[0]}
+function areaDe(it){return it.isEvent?'Eventos':(it.area||'Sin área')}
+
+function expFiltrados(){
+  return allItems()
+    .filter(r=>S.expMeses.indexOf(expKey(r.y,r.m))>=0)
+    .filter(r=>!S.expAreas.length||S.expAreas.indexOf(areaDe(r.it))>=0)
+    .sort((a,b)=>a.k<b.k?-1:(a.k>b.k?1:a.idx-b.idx));   // cronológico, como se va a presentar
+}
+function expGrupos(rows){
+  const orden=AREAS.concat(['Eventos']),g=new Map();
+  rows.forEach(r=>{
+    const a=areaDe(r.it);
+    if(!g.has(a))g.set(a,[]);
+    g.get(a).push(r);
+  });
+  return [...g.entries()]
+    .sort((a,b)=>{
+      const ia=orden.indexOf(a[0]),ib=orden.indexOf(b[0]);
+      return (ia<0?99:ia)-(ib<0?99:ib)||a[0].localeCompare(b[0],'es');
+    })
+    .map(e=>({nombre:e[0],list:e[1]}));
+}
+function expPeriodo(){
+  const ms=S.expMeses.slice().sort();
+  if(!ms.length)return 'Sin meses seleccionados';
+  if(ms.length<=4)return ms.map(expLabel).join(' · ');
+  return `${expLabel(ms[0])} — ${expLabel(ms[ms.length-1])} (${ms.length} meses)`;
+}
+function expNombreArchivo(ext){
+  const ms=S.expMeses.slice().sort();
+  const per=!ms.length?'sin-periodo':(ms.length===1?ms[0]:ms[0]+'_a_'+ms[ms.length-1]);
+  return `colliers-contenidos-${S.pais}-${per}.${ext}`;
+}
+function expFecha(r){return `${String(r.d).padStart(2,'0')}/${String(r.m+1).padStart(2,'0')}/${r.y}`}
+function expEstado(it){return it.done?(it.isEvent?'Realizado':'Subido'):'Pendiente'}
+function expTipo(it){return it.isEvent?'Evento':(it.tipo||'')}
+
+function descargar(nombre,contenido,mime){
+  try{
+    const blob=new Blob([contenido],{type:mime+';charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=nombre;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},1000);
+    toast('✓ Descargando '+nombre);
+  }catch(e){toast('No se pudo descargar el archivo')}
+}
+
+// Documento para presentar: una sección por área, cada una en su hoja al imprimir
+function expDocHTML(){
+  const rows=expFiltrados(),grupos=expGrupos(rows),e=escAttr;
+  const done=rows.filter(r=>r.it.done).length;
+  const hoy=new Date();
+  const secciones=grupos.map(g=>{
+    const gd=g.list.filter(r=>r.it.done).length;
+    const filas=g.list.map(r=>{
+      const it=r.it,href=hrefOf(it.link);
+      return `<tr${it.done?' class="ok"':''}>`+
+        `<td class="fecha">${expFecha(r)}</td>`+
+        `<td><b>${e(temaOf(it))}</b></td>`+
+        `<td>${e(subtemaOf(it))}</td>`+
+        `<td>${e(expTipo(it))}</td>`+
+        `<td>${e(getCanales(it).join(', '))}</td>`+
+        `<td>${e(getResps(it).join(', '))}</td>`+
+        `<td class="estado">${e(expEstado(it))}</td>`+
+        `<td>${href?`<a href="${e(href)}">Ver</a>`:''}</td></tr>`;
+    }).join('');
+    return `<section class="area">
+      <h2>${e(g.nombre)}</h2>
+      <p class="sub">${g.list.length} ${g.list.length===1?'contenido':'contenidos'} · ${gd} ${gd===1?'listo':'listos'} · ${g.list.length-gd} ${g.list.length-gd===1?'pendiente':'pendientes'}</p>
+      <table><thead><tr><th>Fecha</th><th>Tema</th><th>Subtema</th><th>Tipo</th><th>Canal</th><th>A cargo</th><th>Estado</th><th>Link</th></tr></thead>
+      <tbody>${filas}</tbody></table>
+    </section>`;
+  }).join('');
+  return `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Colliers ${e(pais().nombre)} — ${e(expPeriodo())}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Open Sans',Verdana,Arial,sans-serif;color:#000759;background:#fff;padding:28px 34px;font-size:12px}
+.top{background:#25408F;color:#fff;padding:14px 18px;border-radius:3px;display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.top .acc{width:26px;height:3px;background:#FFD400}
+.top h1{font-size:14px;font-weight:700;letter-spacing:.3px}
+.top .per{margin-left:auto;font-size:12px;color:#C3E6FF}
+.resumen{font-size:12px;color:#56648F;margin-bottom:22px;font-weight:600}
+.area{margin-bottom:26px}
+.area h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;border-bottom:2px solid #DBE5FF;padding-bottom:6px;margin-bottom:4px}
+.area .sub{font-size:11px;color:#7B8BBD;margin-bottom:10px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#56648F;border-bottom:1px solid #DBE5FF;padding:6px 8px 6px 0}
+td{padding:7px 8px 7px 0;border-bottom:1px solid #F0F3FA;vertical-align:top;font-size:11px}
+td.fecha{white-space:nowrap;color:#1C54F4;font-weight:700;width:78px}
+td.estado{white-space:nowrap;font-weight:700;color:#ED1B34}
+tr.ok td.estado{color:#1d8177}
+a{color:#1C54F4}
+footer{margin-top:28px;border-top:1px solid #DBE5FF;padding-top:10px;font-size:10px;color:#7B8BBD}
+@media print{
+  body{padding:0;font-size:11px}
+  .area{page-break-before:always}
+  .area:first-of-type{page-break-before:auto}
+  a{text-decoration:none}
+}
+</style></head><body>
+<div class="top"><div class="acc"></div><h1>Colliers ${e(pais().nombre)} — Calendario de Contenidos</h1><div class="per">${e(expPeriodo())}</div></div>
+<div class="resumen">${rows.length} ${rows.length===1?'contenido':'contenidos'} · ${done} ${done===1?'listo':'listos'} · ${rows.length-done} ${rows.length-done===1?'pendiente':'pendientes'}${S.expAreas.length?' · Áreas: '+e(S.expAreas.join(', ')):''}</div>
+${secciones||'<p>No hay contenido calendarizado en el período elegido.</p>'}
+<footer>Generado el ${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()} desde el calendario de contenidos.</footer>
+</body></html>`;
+}
+
+function expCSV(){
+  const cel=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const L=[['Fecha','País','Área','Tema','Subtema','Tipo','Canales','A cargo','Estado','Etiquetas','Link','Descripción'].map(cel).join(';')];
+  expFiltrados().forEach(r=>{
+    const it=r.it;
+    L.push([expFecha(r),pais().nombre,areaDe(it),temaOf(it),subtemaOf(it),expTipo(it),
+      getCanales(it).join(', '),getResps(it).join(', '),expEstado(it),
+      getTags(it).join(', '),hrefOf(it.link),(it.desc||'').replace(/\s*\n\s*/g,' ')].map(cel).join(';'));
+  });
+  return '﻿'+L.join('\r\n');   // BOM: Excel abre bien los acentos
+}
+
+function expTexto(){
+  const rows=expFiltrados(),done=rows.filter(r=>r.it.done).length;
+  const L=[`📋 Colliers ${pais().flag} ${pais().nombre} — Calendario de Contenidos`,expPeriodo(),
+    `${rows.length} ${rows.length===1?'contenido':'contenidos'} · ${done} ${done===1?'listo':'listos'} · ${rows.length-done} ${rows.length-done===1?'pendiente':'pendientes'}`,
+    '──────────────────────────',''];
+  expGrupos(rows).forEach(g=>{
+    L.push(`▸ ${g.nombre} (${g.list.length})`);
+    g.list.forEach(r=>{
+      const it=r.it,bits=[expFecha(r),temaOf(it)];
+      if(subtemaOf(it))bits.push('↳ '+subtemaOf(it));
+      bits.push(expTipo(it));
+      const c=getCanales(it);if(c.length)bits.push(c.join('/'));
+      bits.push(expEstado(it));
+      const lk=hrefOf(it.link);if(lk)bits.push(lk);
+      L.push('   '+bits.join(' · '));
+    });
+    L.push('');
+  });
+  return L.join('\n').replace(/\n{3,}/g,'\n\n');
+}
+
+function abrirExport(){
+  if(!S.expMeses.length)S.expMeses=[expKey(S.year,S.month)];
+  S.expYear=S.year;
+  S.exportOpen=true;
+  render();
+}
+
+let expPreview=null;
+function pintarExport(){
+  if(!expPreview)return;
+  expPreview.innerHTML='';
+  const rows=expFiltrados();
+  const done=rows.filter(r=>r.it.done).length;
+  expPreview.appendChild(txt('div','exp-resumen',
+    `${expPeriodo()} · ${rows.length} ${rows.length===1?'contenido':'contenidos'} · ${done} ${done===1?'listo':'listos'} · ${rows.length-done} ${rows.length-done===1?'pendiente':'pendientes'}`));
+  if(!rows.length){
+    expPreview.appendChild(el('p','empty-msg','No hay contenido calendarizado en el período elegido'));
+    return;
+  }
+  expGrupos(rows).forEach(g=>{
+    const sec=el('div','exp-area');
+    const h=el('div','exp-area-title');
+    h.appendChild(txt('span','exp-area-name',g.nombre));
+    h.appendChild(txt('span','tem-g-count',g.list.length));
+    sec.appendChild(h);
+    g.list.forEach(r=>{
+      const it=r.it,fila=el('div','exp-fila');
+      fila.appendChild(txt('span','exp-fecha',expFecha(r)));
+      const cuerpo=el('div','exp-cuerpo');
+      cuerpo.appendChild(txt('div','exp-tema',temaOf(it)));
+      if(subtemaOf(it))cuerpo.appendChild(txt('div','item-sub','↳ '+subtemaOf(it)));
+      const meta=[expTipo(it)].concat(getCanales(it)).concat(getResps(it)).filter(Boolean);
+      cuerpo.appendChild(txt('div','exp-meta',meta.join(' · ')));
+      fila.appendChild(cuerpo);
+      fila.appendChild(txt('span','tem-state '+(it.done?'ok':'no'),expEstado(it)));
+      sec.appendChild(fila);
+    });
+    expPreview.appendChild(sec);
+  });
+}
+
+function renderExportModal(){
+  const overlay=el('div','modal-overlay');
+  const m=el('div','modal modal-wide');
+  const cerrar=()=>{S.exportOpen=false;expPreview=null;overlay.remove();render()};
+
+  const head=el('div','modal-title');
+  head.appendChild(txt('span','','Exportar contenidos'));
+  const x=el('button','modal-close','✕');x.onclick=cerrar;
+  head.appendChild(x);
+  m.appendChild(head);
+
+  // Selector de meses, con navegación de año
+  const navY=el('div','exp-yearnav');
+  const prev=el('button','nav-btn','&#8249;');
+  const next=el('button','nav-btn','&#8250;');
+  const lbl=txt('span','exp-year',S.expYear);
+  prev.onclick=()=>{S.expYear--;lbl.textContent=S.expYear;pintarMeses()};
+  next.onclick=()=>{S.expYear++;lbl.textContent=S.expYear;pintarMeses()};
+  navY.appendChild(prev);navY.appendChild(lbl);navY.appendChild(next);
+  const todos=el('button','exp-mini','Todo el año');
+  todos.onclick=()=>{
+    for(let i=0;i<12;i++){const k=expKey(S.expYear,i);if(S.expMeses.indexOf(k)<0)S.expMeses.push(k)}
+    pintarMeses();pintarExport();
+  };
+  const nada=el('button','exp-mini','Limpiar');
+  nada.onclick=()=>{S.expMeses=[];pintarMeses();pintarExport()};
+  navY.appendChild(todos);navY.appendChild(nada);
+
+  const grid=el('div','exp-meses');
+  function pintarMeses(){
+    grid.innerHTML='';
+    for(let i=0;i<12;i++){
+      const k=expKey(S.expYear,i);
+      const n=Object.keys(S.data).filter(d=>d.indexOf(k+'-')===0)
+        .reduce((a,d)=>a+(S.data[d]||[]).length,0);
+      const b=el('button','exp-mes'+(S.expMeses.indexOf(k)>=0?' on':''));
+      b.appendChild(txt('span','exp-mes-n',MONTHS[i].slice(0,3)));
+      b.appendChild(txt('span','exp-mes-c',n||'—'));
+      b.title=`${MONTHS[i]} ${S.expYear}: ${n} ${n===1?'contenido':'contenidos'}`;
+      b.onclick=()=>{
+        const p=S.expMeses.indexOf(k);
+        if(p>=0)S.expMeses.splice(p,1); else S.expMeses.push(k);
+        pintarMeses();pintarExport();
+      };
+      grid.appendChild(b);
+    }
+  }
+  const rowMeses=el('div','form-row');
+  rowMeses.appendChild(el('label','','Meses a exportar'));
+  rowMeses.appendChild(navY);
+  rowMeses.appendChild(grid);
+  m.appendChild(rowMeses);
+
+  // Áreas (vacío = todas)
+  const rowAreas=el('div','form-row');
+  rowAreas.appendChild(el('label','','Áreas <span class="label-hint">(ninguna marcada = todas)</span>'));
+  const chips=el('div','toggle-chips');
+  AREAS.concat(['Eventos']).forEach(a=>{
+    const on=S.expAreas.indexOf(a)>=0;
+    const b=txt('button','toggle-chip'+(on?' active':''),a);
+    b.type='button';
+    if(on)b.style.cssText='background:#25408F;border-color:#25408F;color:white';
+    b.onclick=()=>{
+      const p=S.expAreas.indexOf(a);
+      if(p>=0){S.expAreas.splice(p,1);b.classList.remove('active');b.style.cssText=''}
+      else{S.expAreas.push(a);b.classList.add('active');b.style.cssText='background:#25408F;border-color:#25408F;color:white'}
+      pintarExport();
+    };
+    chips.appendChild(b);
+  });
+  rowAreas.appendChild(chips);
+  m.appendChild(rowAreas);
+
+  // Vista previa
+  const rowPrev=el('div','form-row');
+  rowPrev.appendChild(el('label','','Vista previa'));
+  expPreview=el('div','exp-preview');
+  rowPrev.appendChild(expPreview);
+  m.appendChild(rowPrev);
+
+  const btns=el('div','btn-row');
+  const bh=el('button','btn-primary','⬇ Documento');
+  bh.title='Documento para presentar o imprimir (una hoja por área)';
+  bh.onclick=()=>descargar(expNombreArchivo('html'),expDocHTML(),'text/html');
+  const bc=el('button','btn-primary','⬇ Excel (CSV)');
+  bc.style='background:var(--c-teal)';
+  bc.title='Planilla para abrir en Excel';
+  bc.onclick=()=>descargar(expNombreArchivo('csv'),expCSV(),'text/csv');
+  const bt=el('button','btn-share','⧉ Copiar');
+  bt.onclick=()=>copyText(expTexto(),'✓ Listado copiado');
+  btns.appendChild(bh);btns.appendChild(bc);btns.appendChild(bt);
+  m.appendChild(btns);
+
+  overlay.appendChild(m);
+  overlay.onclick=(ev)=>{if(ev.target===overlay)cerrar()};
+  pintarMeses();
+  setTimeout(pintarExport,0);
+  return overlay;
 }
 
 /* ── MODAL ── */
