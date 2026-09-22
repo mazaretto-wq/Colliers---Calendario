@@ -216,6 +216,9 @@ body.dark .form-row input[type=text]:focus{border-color:var(--c-medium)}
 
 /* ── FILTRO POR RESPONSABLE ── */
 .dash-filtro{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--c-pbg)}
+.dash-filtro.activo{background:var(--c-pbg);border-radius:4px;padding:10px 12px;border-bottom:none}
+.filtro-quitar{background:var(--c-dark);color:#fff;border:none;border-radius:20px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Open Sans',Verdana,sans-serif;margin-left:auto;white-space:nowrap}
+.filtro-quitar:hover{background:var(--c-red)}
 .dash-filtro-lbl{font-size:10px;font-weight:700;color:var(--c-dg);text-transform:uppercase;letter-spacing:0.6px}
 
 /* ── MODERN DASHBOARD ── */
@@ -347,6 +350,9 @@ body.dark .detail-header .btn-add-detail{background:#25408F}
 body.dark .empty-msg{color:#8b949e}
 body.dark .legend-item{color:#8b949e}
 body.dark .dash-filtro{border-bottom-color:#30363d}
+body.dark .dash-filtro.activo{background:#1c2128}
+body.dark .filtro-quitar{background:#30363d;color:#e6edf3}
+body.dark .filtro-quitar:hover{background:var(--c-red);color:#fff}
 body.dark .dash-hero-pill{background:rgba(255,255,255,0.12)}
 body.dark .dash-s-title{border-bottom-color:#30363d;color:#8b949e}
 body.dark .area-bar-track{background:#30363d}
@@ -698,7 +704,7 @@ function itemToText(it){
   return L.join('\n');
 }
 function dayToText(y,m,d){
-  const items=S.data[dayKey(y,m,d)]||[];
+  const items=(S.data[dayKey(y,m,d)]||[]).filter(verDe);
   const done=items.filter(it=>it.done).length,pend=items.length-done;
   const fer=feriadoDe(y,m,d);
   const L=[`📅 Colliers ${pais().flag} ${pais().nombre} — Calendario de Contenidos`,fmtDateLong(y,m,d)];
@@ -775,9 +781,14 @@ function getMonthData(y,m,resp){
   return{total,done,pending:total-done,byArea,byCanal,byResp};
 }
 
-// Chips para ver el dashboard completo o el de una sola persona
+/* Filtro por responsable: es global, se aplica a todo lo que se muestra
+   (calendario, temario, dashboards y exportación). No se aplica a las
+   sugerencias ni al aviso de repetidos: esos miran siempre todo lo cargado,
+   porque para no repetir contenido importa lo que hizo cualquiera. */
+function verDe(it){return !S.fResp||getResps(it).indexOf(S.fResp)>=0}
+
 function filtroResp(){
-  const w=el('div','dash-filtro');
+  const w=el('div','dash-filtro'+(S.fResp?' activo':''));
   w.appendChild(txt('span','dash-filtro-lbl','Ver'));
   const chips=el('div','toggle-chips');
   const mk=(val,label,color)=>{
@@ -791,6 +802,12 @@ function filtroResp(){
   mk('','Todo el equipo');
   RESPS().forEach(r=>mk(r,r,respColor(r)));
   w.appendChild(chips);
+  if(S.fResp){
+    const q=txt('button','filtro-quitar','Mostrando sólo lo de '+S.fResp+' ✕');
+    q.type='button';q.title='Volver a ver todo el equipo';
+    q.onclick=()=>{S.fResp='';render()};
+    w.appendChild(q);
+  }
   return w;
 }
 
@@ -801,7 +818,7 @@ function startOfToday(){
   return new Date(n.getFullYear(),n.getMonth(),n.getDate()).getTime();
 }
 function pendingOn(y,m,d){
-  return (S.data[dayKey(y,m,d)]||[]).filter(it=>!it.done).length;
+  return (S.data[dayKey(y,m,d)]||[]).filter(it=>!it.done&&verDe(it)).length;
 }
 function isPastDay(y,m,d,sot){
   return new Date(y,m,d).getTime()<(sot===undefined?startOfToday():sot);
@@ -938,6 +955,7 @@ function render(){
   const caret=(aid&&typeof ae.selectionStart==='number')?[ae.selectionStart,ae.selectionEnd]:null;
   root.innerHTML='';
   root.appendChild(renderTabs());
+  root.appendChild(filtroResp());
   if(S.view==='calendar')root.appendChild(renderCalendar());
   else if(S.view==='temario')root.appendChild(renderTemario());
   else if(S.view==='monthly')root.appendChild(renderMonthly());
@@ -999,7 +1017,7 @@ function renderCalendar(){
     ()=>{S.month++;if(S.month>11){S.month=0;S.year++;}render()},
     expBtn));
 
-  const md=getMonthData(S.year,S.month);
+  const md=getMonthData(S.year,S.month,S.fResp);
   const pct=md.total?Math.round(md.done/md.total*100):0;
   wrap.appendChild(statsGrid([
     {l:'Subidos',v:md.done,s:`${pct}% completado`},
@@ -1040,7 +1058,7 @@ function renderCalendar(){
   for(let d=1;d<=total;d++){
     const wd=new Date(S.year,S.month,d).getDay();
     const k=dayKey(S.year,S.month,d);
-    const items=S.data[k]||[];
+    const items=(S.data[k]||[]).filter(verDe);
     const pend=items.filter(it=>!it.done).length;
     const overdue=pend>0&&isPastDay(S.year,S.month,d,sot);
     const feriado=feriadoDe(S.year,S.month,d);
@@ -1085,7 +1103,10 @@ function renderCalendar(){
   if(S.selectedDay){
     wrap.appendChild(el('hr','divider'));
     const k=dayKey(S.year,S.month,S.selectedDay);
-    const items=S.data[k]||[];
+    // Se filtra para mostrar pero se guarda el índice real: editar y borrar
+    // siguen apuntando al ítem correcto dentro de S.data[k]
+    const visibles=[];
+    (S.data[k]||[]).forEach((item,idx)=>{if(verDe(item))visibles.push({item,idx})});
     const dh=el('div','detail-header');
     const dt=el('p','section-title',`${S.selectedDay} de ${MONTHS[S.month]}`);
     dt.style='margin:0;border:none;padding:0';
@@ -1102,11 +1123,13 @@ function renderCalendar(){
     btnGrp.appendChild(ab2);btnGrp.appendChild(ab3);btnGrp.appendChild(sb);
     dh.appendChild(dt);dh.appendChild(btnGrp);
     wrap.appendChild(dh);
-    if(!items.length){
-      wrap.appendChild(el('p','empty-msg','Sin contenido planificado para este día'));
+    if(!visibles.length){
+      wrap.appendChild(el('p','empty-msg',S.fResp
+        ?'Sin contenido de '+escAttr(S.fResp)+' para este día'
+        :'Sin contenido planificado para este día'));
     } else {
       const cl=el('div','content-list');
-      items.forEach((item,idx)=>{
+      visibles.forEach(({item,idx})=>{
         if(item.isEvent){
           const row=el('div','event-card');
           const cb=el('button','check-btn'+(item.done?' done':''),item.done?'✓':'');
@@ -1174,7 +1197,7 @@ let temResults=null;
 
 function temFiltered(){
   const qt=norm(S.q).split(' ').filter(Boolean);
-  return allItems().filter(r=>{
+  return allItems().filter(r=>verDe(r.it)).filter(r=>{
     const it=r.it;
     if(S.fAnio&&String(r.y)!==S.fAnio)return false;
     if(S.fArea&&(it.isEvent||it.area!==S.fArea))return false;
@@ -1438,7 +1461,6 @@ function renderMonthly(){
   wrap.appendChild(navRow('Dashboard — '+MONTHS[S.month]+' '+S.year,
     ()=>{S.month--;if(S.month<0){S.month=11;S.year--;}render()},
     ()=>{S.month++;if(S.month>11){S.month=0;S.year++;}render()}));
-  wrap.appendChild(filtroResp());
 
   const md=getMonthData(S.year,S.month,S.fResp);
   const pct=md.total?Math.round(md.done/md.total*100):0;
@@ -1554,7 +1576,6 @@ function renderAnnual(){
   wrap.appendChild(navRow('Resumen Anual '+S.year,
     ()=>{S.year--;render()},
     ()=>{S.year++;render()}));
-  wrap.appendChild(filtroResp());
 
   let yt=0,yd=0;
   const byA={};AREAS.forEach(a=>byA[a]={total:0,done:0});
@@ -1672,6 +1693,7 @@ function areaDe(it){return it.isEvent?'Eventos':(it.area||'Sin área')}
 
 function expFiltrados(){
   return allItems()
+    .filter(r=>verDe(r.it))
     .filter(r=>S.expMeses.indexOf(expKey(r.y,r.m))>=0)
     .filter(r=>!S.expAreas.length||S.expAreas.indexOf(areaDe(r.it))>=0)
     .sort((a,b)=>a.k<b.k?-1:(a.k>b.k?1:a.idx-b.idx));   // cronológico, como se va a presentar
@@ -1699,7 +1721,8 @@ function expPeriodo(){
 function expNombreArchivo(ext){
   const ms=S.expMeses.slice().sort();
   const per=!ms.length?'sin-periodo':(ms.length===1?ms[0]:ms[0]+'_a_'+ms[ms.length-1]);
-  return `colliers-contenidos-${S.pais}-${per}.${ext}`;
+  const quien=S.fResp?'-'+norm(S.fResp).replace(/ /g,'-'):'';
+  return `colliers-contenidos-${S.pais}${quien}-${per}.${ext}`;
 }
 function expFecha(r){return `${String(r.d).padStart(2,'0')}/${String(r.m+1).padStart(2,'0')}/${r.y}`}
 function expEstado(it){return it.done?(it.isEvent?'Realizado':'Subido'):'Pendiente'}
@@ -1740,7 +1763,7 @@ function expDocHTML(titulo){
     }).join('');
     return `<section class="area">
       <h2>${e(g.nombre)}</h2>
-      <p class="sub">Colliers ${e(pais().nombre)} · ${e(per)} · ${g.list.length} ${g.list.length===1?'contenido':'contenidos'} · ${gd} ${gd===1?'listo':'listos'} · ${g.list.length-gd} ${g.list.length-gd===1?'pendiente':'pendientes'}</p>
+      <p class="sub">Colliers ${e(pais().nombre)} · ${e(per)}${S.fResp?' · A cargo de '+e(S.fResp):''} · ${g.list.length} ${g.list.length===1?'contenido':'contenidos'} · ${gd} ${gd===1?'listo':'listos'} · ${g.list.length-gd} ${g.list.length-gd===1?'pendiente':'pendientes'}</p>
       <table><thead><tr><th>Fecha</th><th>Tema</th><th>Subtema</th><th>Tipo</th><th>Canal</th><th>A cargo</th><th>Estado</th><th>Link</th></tr></thead>
       <tbody>${filas}</tbody></table>
     </section>`;
@@ -1780,7 +1803,7 @@ footer{margin-top:28px;border-top:1px solid #DBE5FF;padding-top:10px;font-size:1
 }
 </style></head><body>
 <div class="top"><div class="acc"></div><h1>Colliers ${e(pais().nombre)} — Calendario de Contenidos</h1><div class="per">${e(per)}</div></div>
-<div class="resumen">${rows.length} ${rows.length===1?'contenido':'contenidos'} · ${done} ${done===1?'listo':'listos'} · ${rows.length-done} ${rows.length-done===1?'pendiente':'pendientes'}${S.expAreas.length?' · Áreas: '+e(S.expAreas.join(', ')):''}</div>
+<div class="resumen">${S.fResp?'A cargo de '+e(S.fResp)+' · ':''}${rows.length} ${rows.length===1?'contenido':'contenidos'} · ${done} ${done===1?'listo':'listos'} · ${rows.length-done} ${rows.length-done===1?'pendiente':'pendientes'}${S.expAreas.length?' · Áreas: '+e(S.expAreas.join(', ')):''}</div>
 ${secciones||'<p>No hay contenido calendarizado en el período elegido.</p>'}
 <footer>Generado el ${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()} desde el calendario de contenidos.</footer>
 </body></html>`;
@@ -1902,7 +1925,7 @@ function expPDF(){
     texto(M,y,g.nombre.toUpperCase()+(sigue?' (cont.)':''),12,true,'#000759');
     y+=13;
     const gd=g.list.filter(r=>r.it.done).length;
-    texto(M,y,`Colliers ${pais().nombre} · ${per} · ${g.list.length} ${g.list.length===1?'contenido':'contenidos'} · ${gd} ${gd===1?'listo':'listos'} · ${g.list.length-gd} ${g.list.length-gd===1?'pendiente':'pendientes'}`,8.5,false,'#7B8BBD');
+    texto(M,y,`Colliers ${pais().nombre} · ${per}${S.fResp?' · A cargo de '+S.fResp:''} · ${g.list.length} ${g.list.length===1?'contenido':'contenidos'} · ${gd} ${gd===1?'listo':'listos'} · ${g.list.length-gd} ${g.list.length-gd===1?'pendiente':'pendientes'}`,8.5,false,'#7B8BBD');
     y+=6;rect(M,y,W-2*M,1.2,'#DBE5FF');y+=18;
   };
   const cabeceraTabla=()=>{
@@ -2032,7 +2055,7 @@ function expCSV(){
 
 function expTexto(){
   const rows=expFiltrados(),done=rows.filter(r=>r.it.done).length;
-  const L=[`📋 Colliers ${pais().flag} ${pais().nombre} — Calendario de Contenidos`,expPeriodo(),
+  const L=[`📋 Colliers ${pais().flag} ${pais().nombre} — Calendario de Contenidos`,expPeriodo()+(S.fResp?' · A cargo de '+S.fResp:''),
     `${rows.length} ${rows.length===1?'contenido':'contenidos'} · ${done} ${done===1?'listo':'listos'} · ${rows.length-done} ${rows.length-done===1?'pendiente':'pendientes'}`,
     '──────────────────────────',''];
   expGrupos(rows).forEach(g=>{
@@ -2344,7 +2367,7 @@ function renderModal(){
   const k=dayKey(S.year,S.month,S.selectedDay);
   const isEdit=S.editIdx!==null;
   if(S.eventMode){
-    const item=isEdit?(S.data[k]||[])[S.editIdx]:{nombre:'',resps:[],tags:[],desc:'',link:'',done:false};
+    const item=isEdit?(S.data[k]||[])[S.editIdx]:{nombre:'',resps:S.fResp?[S.fResp]:[],tags:[],desc:'',link:'',done:false};
     const selResps=getResps(item);
     const overlay=el('div','modal-overlay');
     const m=el('div','modal');
@@ -2413,7 +2436,7 @@ function renderModal(){
     },30);
     return overlay;
   }
-  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tema:'',subtema:'',tipo:TIPOS[0],area:AREAS[0],resps:[],canales:[],tags:[],desc:'',link:'',done:false};
+  const item=isEdit?(S.data[k]||[])[S.editIdx]:{tema:'',subtema:'',tipo:TIPOS[0],area:AREAS[0],resps:S.fResp?[S.fResp]:[],canales:[],tags:[],desc:'',link:'',done:false};
   const selCanales=getCanales(item);
   const selResps=getResps(item);
   const overlay=el('div','modal-overlay');
