@@ -426,7 +426,7 @@ const AREAS=['Valuaciones','SPS','MKT','Research','Oficinas','Industrias','Retai
 const CANALES=['IG','Email MKT','LinkedIn','Facebook','X','YouTube'];
 const CANAL_COLORS={'IG':'tag-ig','Email MKT':'tag-em','LinkedIn':'tag-li','Facebook':'tag-fb','X':'tag-x','YouTube':'tag-yt'};
 const CANAL_BG={'IG':'#1C54F4','Email MKT':'#2AB6A9','LinkedIn':'#25408F','Facebook':'#4D93FF','X':'#353E59','YouTube':'#FF0000'};
-const RESPONSABLES=['Azaretto M.','Mendoza J.','Morua C.','Latorre I.'];
+const RESPONSABLES=['Azaretto M.','Mendoza J.','Wolkowicz N.','Latorre I.'];
 const RESP_COLORS=['#25408F','#1C54F4','#2AB6A9','#353E59'];
 
 function getCanales(it){return Array.isArray(it.canales)?it.canales:(it.canal?[it.canal]:[]);}
@@ -581,6 +581,34 @@ function respColor(r){
   return RESP_COLORS[(i<0?0:i)%RESP_COLORS.length];
 }
 
+/* Renombres de responsables. Al cambiar un nombre en la lista, lo ya cargado
+   queda con el nombre viejo y dejaría de contar en el filtro y en los
+   dashboards, así que se reescribe una sola vez sobre los datos. Es
+   idempotente: cuando ya no queda nada con el nombre viejo, no escribe nada. */
+const RENOMBRES={'Morua C.':'Wolkowicz N.'};
+function migrarNombres(){
+  if(!Object.keys(RENOMBRES).length)return 0;
+  let cambios=0;
+  Object.keys(S.data).forEach(k=>{
+    (S.data[k]||[]).forEach(it=>{
+      if(!it)return;
+      const antes=getResps(it);
+      if(!antes.length)return;
+      const vistos=new Set(),despues=[];
+      antes.forEach(r=>{
+        const n=RENOMBRES[r]||r;
+        if(!vistos.has(n)){vistos.add(n);despues.push(n)}
+      });
+      if(despues.join('|')===antes.join('|'))return;
+      it.resps=despues;
+      if(it.resp!==undefined)delete it.resp;   // formato viejo de un solo responsable
+      cambios++;
+    });
+  });
+  if(cambios)save(S.data);
+  return cambios;
+}
+
 const firebaseConfig={
   apiKey:"AIzaSyA2sTpsyFt4_SWhinvyGkNlTARw2zctMbw",
   authDomain:"colliers-calendar.firebaseapp.com",
@@ -600,7 +628,7 @@ function suscribir(){
   if(dataRef)dataRef.off();
   S.data={};
   dataRef=firebaseDb.ref(pais().node);
-  dataRef.on('value',(snap)=>{S.data=snap.val()||{};render()});
+  dataRef.on('value',(snap)=>{S.data=snap.val()||{};migrarNombres();render()});
   render();
 }
 function setPais(p){
